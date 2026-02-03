@@ -1,0 +1,64 @@
+version: 2
+
+project_name: slackbuzz
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - main: ./cmd/slackbuzz
+    binary: slackbuzz
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/triptechtravel/slackbuzz-cli/internal/build.Version={{.Version}}
+      - -X github.com/triptechtravel/slackbuzz-cli/internal/build.Commit={{.Commit}}
+      - -X github.com/triptechtravel/slackbuzz-cli/internal/build.Date={{.Date}}
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+brews:
+  - repository:
+      owner: triptechtravel
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    skip_upload: true
+    homepage: "https://github.com/triptechtravel/slackbuzz-cli"
+    description: "CLI tool for Slack messaging, channel management, and search"
+    license: "MIT"
+    install: |
+      bin.install "slackbuzz"
+    test: |
+      system "#{bin}/slackbuzz", "version"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+
+release:
+  github:
+    owner: triptechtravel
+    name: slackbuzz-cli

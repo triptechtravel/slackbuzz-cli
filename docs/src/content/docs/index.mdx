@@ -1,0 +1,97 @@
+---
+title: slackbuzz CLI
+description: A command-line tool for working with Slack messages, channels, and cross-tool workflows -- designed for developers who live in the terminal.
+template: splash
+hero:
+  tagline: Slack from your terminal.
+  image:
+    html: |
+      <div style="background:#1a1b26;border-radius:10px;overflow:hidden;font-family:'SF Mono',SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;font-size:13px;line-height:1.6;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+        <div style="background:#24283b;padding:8px 12px;display:flex;align-items:center;gap:6px;">
+          <span style="width:12px;height:12px;border-radius:50%;background:#ff5f57;display:inline-block;"></span>
+          <span style="width:12px;height:12px;border-radius:50%;background:#febc2e;display:inline-block;"></span>
+          <span style="width:12px;height:12px;border-radius:50%;background:#28c840;display:inline-block;"></span>
+        </div>
+        <div style="padding:16px 18px;color:#a9b1d6;">
+          <div><span style="color:#4A154B;">$</span> slackbuzz activity</div>
+          <div style="margin:8px 0;padding:8px 12px;border:1px solid #3b4261;border-radius:6px;">
+            <div style="color:#36C5F0;font-weight:600;">@mention</div>
+            <div style="color:#c0caf5;">alice in #engineering &mdash; "Can you review PR #42?"</div>
+            <div style="margin-top:4px;"><span style="color:#2EB67D;">2h ago</span> <span style="color:#565f89;">&#8594; gh pr view 42</span></div>
+          </div>
+          <div style="margin-top:10px;"><span style="color:#4A154B;">$</span> slackbuzz react #engineering 170600... :eyes:</div>
+          <div style="margin-top:4px;"><span style="color:#2EB67D;">&#10004;</span> Reacted with <span style="color:#ECB22E;">&#x1F440;</span></div>
+        </div>
+      </div>
+  actions:
+    - text: Get Started
+      link: /slackbuzz-cli/installation/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/triptechtravel/slackbuzz-cli
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:2rem;">
+  <a href="https://github.com/triptechtravel/slackbuzz-cli/releases/latest"><img src="https://img.shields.io/github/v/release/triptechtravel/slackbuzz-cli?style=flat&color=4A154B" alt="Release" /></a>
+  <a href="https://github.com/triptechtravel/slackbuzz-cli/stargazers"><img src="https://img.shields.io/github/stars/triptechtravel/slackbuzz-cli?style=social" alt="GitHub Stars" /></a>
+  <a href="https://github.com/triptechtravel/slackbuzz-cli/blob/main/LICENSE"><img src="https://img.shields.io/github/license/triptechtravel/slackbuzz-cli?style=flat" alt="License" /></a>
+</div>
+
+## Features
+
+<CardGrid stagger>
+  <Card title="Activity inbox" icon="pencil">
+    See mentions, DMs, and threads that need your attention -- with ClickUp and GitHub enrichment.
+  </Card>
+  <Card title="Cross-tool digest" icon="list-format">
+    Morning briefing combining Slack mentions, ClickUp tasks, and GitHub PRs in one view.
+  </Card>
+  <Card title="Messaging" icon="rocket">
+    Send messages, reply to threads, react to messages, and search across your workspace.
+  </Card>
+  <Card title="Status management" icon="setting">
+    Set, view, and clear your Slack status from the terminal with emoji and expiry.
+  </Card>
+  <Card title="AI-friendly" icon="star">
+    Structured `--json` output and `--jq` filtering for AI coding agents.
+  </Card>
+  <Card title="Emoji rendering" icon="magnifier">
+    1900+ emoji shortcodes rendered as Unicode, plus custom workspace emoji.
+  </Card>
+</CardGrid>
+
+## Quick install
+
+```sh
+go install github.com/triptechtravel/slackbuzz-cli/cmd/slackbuzz@latest
+```
+
+Or via Homebrew:
+
+```sh
+brew install triptechtravel/tap/slackbuzz
+```
+
+See the [Installation](/slackbuzz-cli/installation/) page for all options.
+
+## Quick start
+
+```sh
+# Create a Slack app with all required scopes
+slackbuzz app create
+
+# Check your inbox
+slackbuzz activity
+
+# Get a cross-tool morning briefing
+slackbuzz digest
+
+# Send a message
+slackbuzz message send #general "Hello from the terminal!"
+```
+
+See the [Getting started](/slackbuzz-cli/getting-started/) guide for a full walkthrough.

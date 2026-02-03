@@ -1,0 +1,44 @@
+/* Slack brand colors */
+:root {
+  --slack-aubergine: #4A154B;
+  --slack-aubergine-light: #611f69;
+  --slack-blue: #36C5F0;
+  --slack-green: #2EB67D;
+  --slack-yellow: #ECB22E;
+  --slack-red: #E01E5A;
+}
+
+/* Starlight dark theme overrides */
+:root[data-theme='dark'] {
+  --sl-color-accent-low: #2d1230;
+  --sl-color-accent: #611f69;
+  --sl-color-accent-high: #d4a5d8;
+  --sl-color-text-accent: #d4a5d8;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #f3e0f5;
+  --sl-color-accent: #4A154B;
+  --sl-color-accent-high: #2d0a2e;
+  --sl-color-text-accent: #2d0a2e;
+}
+
+/* Selection highlight */
+::selection {
+  background-color: rgba(74, 21, 75, 0.3);
+}
+
+/* Hero gradient for the landing page title */
+[data-page-type='splash'] .hero h1 {
+  background: linear-gradient(135deg, var(--slack-aubergine-light), var(--slack-blue), var(--slack-green));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Give terminal mockup more room on desktop */
+@media (min-width: 50rem) {
+  [data-page-type='splash'] .hero > .hero-html {
+    min-width: 28rem;
+  }
+}
