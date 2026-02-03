@@ -17,6 +17,7 @@ type sendOptions struct {
 	channel  string
 	text     string
 	threadTS string
+	asBot    bool
 	json     cmdutil.JSONFlags
 }
 
@@ -54,6 +55,7 @@ If text is omitted, reads from stdin (for piping).`,
 	}
 
 	cmd.Flags().StringVar(&opts.threadTS, "thread-ts", "", "Thread timestamp to reply to")
+	cmd.Flags().BoolVar(&opts.asBot, "as-bot", false, "Send as the bot instead of your user account")
 	cmdutil.AddJSONFlags(cmd, &opts.json)
 
 	return cmd
@@ -63,7 +65,13 @@ func sendRun(opts *sendOptions) error {
 	ios := opts.factory.IOStreams
 	cs := ios.ColorScheme()
 
-	client, err := opts.factory.DefaultClient()
+	var client *api.Client
+	var err error
+	if opts.asBot {
+		client, err = opts.factory.DefaultClient()
+	} else {
+		client, err = opts.factory.UserClient()
+	}
 	if err != nil {
 		return err
 	}

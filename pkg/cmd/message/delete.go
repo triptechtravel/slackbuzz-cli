@@ -14,6 +14,7 @@ type deleteOptions struct {
 	channel string
 	ts      string
 	confirm bool
+	asBot   bool
 	json    cmdutil.JSONFlags
 }
 
@@ -43,6 +44,7 @@ In non-interactive (piped) mode, --confirm is required.`,
 	}
 
 	cmd.Flags().BoolVar(&opts.confirm, "confirm", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVar(&opts.asBot, "as-bot", false, "Delete as the bot instead of your user account")
 	cmdutil.AddJSONFlags(cmd, &opts.json)
 
 	return cmd
@@ -52,7 +54,13 @@ func deleteRun(opts *deleteOptions) error {
 	ios := opts.factory.IOStreams
 	cs := ios.ColorScheme()
 
-	client, err := opts.factory.DefaultClient()
+	var client *api.Client
+	var err error
+	if opts.asBot {
+		client, err = opts.factory.DefaultClient()
+	} else {
+		client, err = opts.factory.UserClient()
+	}
 	if err != nil {
 		return err
 	}
