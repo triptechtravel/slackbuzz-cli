@@ -26,8 +26,12 @@ INBOX & ACTIVITY
 MESSAGING
   slackbuzz message list <chan>  Read channel/thread history
   slackbuzz message send <chan>  Send a message
+  slackbuzz message edit <ch> <ts>  Edit a message
+  slackbuzz message delete <ch> <ts>  Delete a message
   slackbuzz message search <q>  Search messages (user token required)
+  slackbuzz file search <q>     Search files (user token required)
   slackbuzz react <chan> <ts>    React to a message
+  slackbuzz react remove <ch> <ts>  Remove a reaction
 
 CHANNELS & USERS
   slackbuzz channel list         List channels
@@ -57,6 +61,7 @@ TIPS
 * [slackbuzz completion](/slackbuzz-cli/reference/slackbuzz_completion/)	 - Generate shell completion scripts
 * [slackbuzz digest](/slackbuzz-cli/reference/slackbuzz_digest/)	 - Cross-tool morning briefing (Slack + ClickUp + GitHub)
 * [slackbuzz dm](/slackbuzz-cli/reference/slackbuzz_dm/)	 - Direct message management
+* [slackbuzz file](/slackbuzz-cli/reference/slackbuzz_file/)	 - Search and manage files
 * [slackbuzz later](/slackbuzz-cli/reference/slackbuzz_later/)	 - Saved/bookmarked items
 * [slackbuzz message](/slackbuzz-cli/reference/slackbuzz_message/)	 - Send and read Slack messages
 * [slackbuzz notify](/slackbuzz-cli/reference/slackbuzz_notify/)	 - Send formatted notifications

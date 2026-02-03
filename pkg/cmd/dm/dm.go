@@ -143,9 +143,6 @@ func listRun(opts *listOptions) error {
 	conversations := make([]dmConversation, 0, len(grouped))
 	for user, acc := range grouped {
 		msg := text.FormatSlackText(acc.lastMessage)
-		if len(msg) > 60 {
-			msg = text.Truncate(msg, 60)
-		}
 		conversations = append(conversations, dmConversation{
 			User:         user,
 			MessageCount: acc.count,
@@ -164,6 +161,11 @@ func listRun(opts *listOptions) error {
 
 	if opts.json.WantsJSON() {
 		return opts.json.OutputJSON(ios.Out, conversations)
+	}
+
+	// Reverse so most recent is at the bottom (natural terminal reading order)
+	for i, j := 0, len(conversations)-1; i < j; i, j = i+1, j-1 {
+		conversations[i], conversations[j] = conversations[j], conversations[i]
 	}
 
 	for _, conv := range conversations {

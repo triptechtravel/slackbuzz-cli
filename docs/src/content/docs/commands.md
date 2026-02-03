@@ -227,19 +227,81 @@ slackbuzz message send #general "Fixed!" --thread-ts 1706000000.000000
 |------|-------------|
 | `--thread-ts TIMESTAMP` | Send as a thread reply |
 
+### `message edit <channel> <timestamp> [new-text]`
+
+Edit an existing message. If new-text is omitted, reads from stdin.
+
+```sh
+slackbuzz message edit #general 1706000000.000000 "updated text"
+echo "corrected text" | slackbuzz message edit #general 1706000000.000000
+```
+
+### `message delete <channel> <timestamp>`
+
+Delete a message. Prompts for confirmation in interactive mode.
+
+```sh
+slackbuzz message delete #general 1706000000.000000
+slackbuzz message delete #general 1706000000.000000 --confirm
+```
+
+| Flag | Description |
+|------|-------------|
+| `--confirm` | Skip confirmation prompt (required in non-interactive mode) |
+
 ### `message search <query>`
 
 Search messages across your workspace (user token required).
 
 ```sh
 slackbuzz message search "deployment"
-slackbuzz message search "from:@alice in:#engineering API"
-slackbuzz message search "deployment" --json
+slackbuzz message search "error" --channel #general
+slackbuzz message search "fix" --from @alice --since 2026-01-01
+slackbuzz message search "deploy" --has :rocket:
+slackbuzz message search "bug" --is thread --during week
+slackbuzz message search "deploy" --sort score --page 2
 ```
 
 | Flag | Description |
 |------|-------------|
-| `--limit N` | Maximum number of results |
+| `--channel CHANNEL` | Filter by channel |
+| `--from USER` | Filter by user |
+| `--since DATE` | Only show messages after this date (YYYY-MM-DD) |
+| `--until DATE` | Only show messages before this date (YYYY-MM-DD) |
+| `--has EMOJI` | Filter by emoji reaction (e.g. `:rocket:`) |
+| `--is TYPE` | Filter by type: `dm`, `thread`, or `starred` |
+| `--during PERIOD` | Filter by time period: `today`, `yesterday`, `week`, or `month` |
+| `--sort ORDER` | Sort order: `timestamp` (default) or `score` |
+| `--page N` | Page number for pagination |
+| `--limit N` | Maximum number of results per page |
+| `--json` | Output as JSON |
+| `--jq EXPR` | Filter JSON output with a jq expression |
+
+---
+
+## file
+
+Search files shared in Slack.
+
+### `file search <query>`
+
+Search files across your workspace (user token required).
+
+```sh
+slackbuzz file search "design spec"
+slackbuzz file search "report" --type pdf
+slackbuzz file search "report" --channel #engineering
+slackbuzz file search "diagram" --from @alice
+slackbuzz file search "report" --page 2
+```
+
+| Flag | Description |
+|------|-------------|
+| `--channel CHANNEL` | Filter by channel |
+| `--from USER` | Filter by uploader |
+| `--type FILETYPE` | Filter by file type (e.g. `pdf`, `png`, `zip`) |
+| `--limit N` | Maximum number of results per page |
+| `--page N` | Page number for pagination |
 | `--json` | Output as JSON |
 | `--jq EXPR` | Filter JSON output with a jq expression |
 
@@ -255,6 +317,15 @@ React to a message with an emoji.
 slackbuzz react #general 1706000000.000000 :eyes:
 slackbuzz react #general 1706000000.000000 :white_check_mark:
 slackbuzz react #engineering 1706000000.000000 :thumbsup:
+```
+
+### `react remove <channel> <timestamp> <emoji>`
+
+Remove a reaction from a message.
+
+```sh
+slackbuzz react remove #general 1706000000.000000 :eyes:
+slackbuzz react remove #general 1706000000.000000 thumbsup
 ```
 
 ---

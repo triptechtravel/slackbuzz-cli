@@ -149,9 +149,6 @@ func digestRun(opts *digestOptions) error {
 			}
 
 			msgText := text.FormatSlackText(item.Text)
-			if len(msgText) > 80 {
-				msgText = text.Truncate(msgText, 80)
-			}
 
 			fmt.Fprintf(ios.Out, "  @%-12s %-18s %q  %s\n",
 				cs.Bold(item.User),
@@ -196,7 +193,7 @@ func digestRun(opts *digestOptions) error {
 		for _, pr := range data.GitHub {
 			fmt.Fprintf(ios.Out, "  #%-6d %-40s %s  %s\n",
 				pr.Number,
-				text.Truncate(pr.Title, 40),
+				pr.Title,
 				cs.Bold(pr.Author),
 				cs.Green(fmt.Sprintf("+%d -%d", pr.Additions, pr.Deletions)),
 			)

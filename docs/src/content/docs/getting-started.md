@@ -77,6 +77,13 @@ React to a message:
 slackbuzz react #general 1706000000.000000 :white_check_mark:
 ```
 
+Edit or delete a message:
+
+```sh
+slackbuzz message edit #general 1706000000.000000 "corrected text"
+slackbuzz message delete #general 1706000000.000000 --confirm
+```
+
 ## Step 4: Set your status
 
 ```sh

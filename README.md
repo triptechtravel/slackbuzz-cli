@@ -14,9 +14,10 @@ A command-line tool for working with Slack messages, channels, and cross-tool wo
 
 - **Activity inbox** -- see mentions, DMs, and threads that need your attention (alias: `inbox`)
 - **Cross-tool digest** -- morning briefing combining Slack mentions, ClickUp tasks, and GitHub PRs
-- **Message management** -- list, send, and search messages in any channel or DM
+- **Message management** -- list, send, search, edit, and delete messages in any channel or DM
+- **File search** -- search files shared across your workspace
 - **Thread support** -- read and reply to threads
-- **Reactions** -- react to messages and see reactions inline in activity views
+- **Reactions** -- add and remove reactions, see reactions inline in activity views
 - **Saved items** -- save messages for later and manage your bookmarks
 - **Status management** -- set, view, and clear your Slack status from the terminal
 - **DM conversations** -- list and browse direct message conversations
@@ -101,8 +102,12 @@ slackbuzz digest
 |---------|-------------|
 | `slackbuzz message list <channel>` | Read channel or thread history |
 | `slackbuzz message send <channel> "text"` | Send a message |
+| `slackbuzz message edit <channel> <ts> "text"` | Edit a message |
+| `slackbuzz message delete <channel> <ts>` | Delete a message |
 | `slackbuzz message search <query>` | Search messages (user token required) |
+| `slackbuzz file search <query>` | Search files (user token required) |
 | `slackbuzz react <channel> <ts> :emoji:` | React to a message |
+| `slackbuzz react remove <channel> <ts> :emoji:` | Remove a reaction |
 | `slackbuzz notify <channel> "text"` | Send formatted Block Kit notifications |
 | `slackbuzz thread <channel> <ts> "text"` | Reply to a thread |
 

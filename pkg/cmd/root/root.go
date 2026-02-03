@@ -9,6 +9,7 @@ import (
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/completion"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/digest"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/dm"
+	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/file"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/later"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/message"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/notify"
@@ -43,8 +44,12 @@ INBOX & ACTIVITY
 MESSAGING
   slackbuzz message list <chan>  Read channel/thread history
   slackbuzz message send <chan>  Send a message
+  slackbuzz message edit <ch> <ts>  Edit a message
+  slackbuzz message delete <ch> <ts>  Delete a message
   slackbuzz message search <q>  Search messages (user token required)
+  slackbuzz file search <q>     Search files (user token required)
   slackbuzz react <chan> <ts>    React to a message
+  slackbuzz react remove <ch> <ts>  Remove a reaction
 
 CHANNELS & USERS
   slackbuzz channel list         List channels
@@ -109,6 +114,10 @@ TIPS
 	reactCmd := react.NewCmdReact(f)
 	reactCmd.GroupID = "messaging"
 	cmd.AddCommand(reactCmd)
+
+	fileCmd := file.NewCmdFile(f)
+	fileCmd.GroupID = "messaging"
+	cmd.AddCommand(fileCmd)
 
 	threadCmd := thread.NewCmdThread(f)
 	threadCmd.GroupID = "messaging"

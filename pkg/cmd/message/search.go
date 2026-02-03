@@ -2,6 +2,7 @@ package message
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
@@ -17,6 +18,11 @@ type searchOptions struct {
 	from    string
 	since   string
 	until   string
+	has     string
+	is      string
+	during  string
+	sort    string
+	page    int
 	limit   int
 	json    cmdutil.JSONFlags
 }
@@ -39,8 +45,17 @@ does not support bot tokens.`,
   slackbuzz message search "error" --channel #general
 
   # Search from a user since a date
-  slackbuzz message search "fix" --from @alice --since 2026-01-01`,
-		Args: cobra.ExactArgs(1),
+  slackbuzz message search "fix" --from @alice --since 2026-01-01
+
+  # Search with emoji filter
+  slackbuzz message search "deploy" --has :rocket:
+
+  # Search threads from this week
+  slackbuzz message search "bug" --is thread --during week
+
+  # Sort by relevance, page 2
+  slackbuzz message search "deploy" --sort score --page 2`,
+		Args:              cobra.ExactArgs(1),
 		PersistentPreRunE: cmdutil.NeedsUserToken(f),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.query = args[0]
@@ -52,7 +67,12 @@ does not support bot tokens.`,
 	cmd.Flags().StringVar(&opts.from, "from", "", "Filter by user")
 	cmd.Flags().StringVar(&opts.since, "since", "", "Only show messages after this date (YYYY-MM-DD)")
 	cmd.Flags().StringVar(&opts.until, "until", "", "Only show messages before this date (YYYY-MM-DD)")
-	cmd.Flags().IntVar(&opts.limit, "limit", 20, "Maximum number of results")
+	cmd.Flags().StringVar(&opts.has, "has", "", "Filter by emoji reaction (e.g. :rocket:)")
+	cmd.Flags().StringVar(&opts.is, "is", "", "Filter by type: dm, thread, or starred")
+	cmd.Flags().StringVar(&opts.during, "during", "", "Filter by time period: today, yesterday, week, or month")
+	cmd.Flags().StringVar(&opts.sort, "sort", "timestamp", "Sort order: timestamp or score")
+	cmd.Flags().IntVar(&opts.page, "page", 1, "Page number for pagination")
+	cmd.Flags().IntVar(&opts.limit, "limit", 20, "Maximum number of results per page")
 	cmdutil.AddJSONFlags(cmd, &opts.json)
 
 	return cmd
@@ -81,11 +101,22 @@ func searchRun(opts *searchOptions) error {
 	if opts.until != "" {
 		query += fmt.Sprintf(" before:%s", opts.until)
 	}
+	if opts.has != "" {
+		emoji := strings.Trim(opts.has, ":")
+		query += fmt.Sprintf(" has:%s", emoji)
+	}
+	if opts.is != "" {
+		query += fmt.Sprintf(" is:%s", opts.is)
+	}
+	if opts.during != "" {
+		query += fmt.Sprintf(" during:%s", opts.during)
+	}
 
 	params := slack.SearchParameters{
-		Sort:          "timestamp",
+		Sort:          opts.sort,
 		SortDirection: "desc",
 		Count:         opts.limit,
+		Page:          opts.page,
 	}
 
 	result, err := client.Slack.SearchMessages(query, params)
@@ -131,9 +162,11 @@ func searchRun(opts *searchOptions) error {
 		fmt.Fprintf(ios.Out, "  %s\n\n", msgText)
 	}
 
-	if result.Total > len(result.Matches) {
-		remaining := result.Total - len(result.Matches)
-		fmt.Fprintf(ios.Out, "%s\n", cs.Gray(fmt.Sprintf("... and %d more results", remaining)))
+	// Pagination footer
+	if result.Paging.Pages > 1 {
+		fmt.Fprintf(ios.Out, "%s\n",
+			cs.Gray(fmt.Sprintf("Page %d of %d (%d total results) — use --page %d to see more",
+				result.Paging.Page, result.Paging.Pages, result.Total, result.Paging.Page+1)))
 	}
 
 	return nil

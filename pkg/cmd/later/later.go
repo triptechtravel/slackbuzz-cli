@@ -97,14 +97,16 @@ func listRun(opts *listOptions) error {
 		return opts.json.OutputJSON(ios.Out, items)
 	}
 
+	// Reverse so most recent is at the bottom (natural terminal reading order)
+	for i, j := 0, len(items)-1; i < j; i, j = i+1, j-1 {
+		items[i], items[j] = items[j], items[i]
+	}
+
 	for i, item := range items {
 		ts := activity.ParseSlackTimestamp(item.Timestamp)
 		timeStr := text.RelativeTime(ts)
 
 		msgText := text.FormatSlackText(item.Text)
-		if len(msgText) > 100 {
-			msgText = text.Truncate(msgText, 100)
-		}
 
 		channelDisplay := item.Channel
 		if channelDisplay != "" {

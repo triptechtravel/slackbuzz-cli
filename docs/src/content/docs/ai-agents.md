@@ -33,6 +33,12 @@ slackbuzz thread #engineering 1706000000.000000 "Fix deployed, see PR #42"
 
 # 7. Agent reacts to acknowledge
 slackbuzz react #engineering 1706000000.000000 :white_check_mark:
+
+# 8. Agent edits a message if needed
+slackbuzz message edit #engineering 1706000000.000000 "Updated: fix deployed in PR #43"
+
+# 9. Agent searches for relevant files
+slackbuzz file search "API spec" --type pdf --json
 ```
 
 ## Key features for AI agents
@@ -141,5 +147,8 @@ slackbuzz threads --since 1d --json
 - Use `slackbuzz message list --json` to give the agent context from channel discussions
 - Use `slackbuzz digest --json` to give the agent cross-tool context
 - The activity view includes channel IDs, timestamps, and permalinks that agents can use to take action
+- Use `slackbuzz message edit` and `slackbuzz message delete` to correct mistakes
+- Use `slackbuzz file search` to find shared files and documents
+- Use `slackbuzz react remove` to undo reactions
 - All commands are safe to run multiple times (reads are idempotent, sends create new messages)
 - Combine with `clickup` and `gh` CLIs for full cross-tool agent workflows

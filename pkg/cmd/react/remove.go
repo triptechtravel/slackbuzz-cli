@@ -10,46 +10,40 @@ import (
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
-type reactOptions struct {
+type removeOptions struct {
 	factory *cmdutil.Factory
 	channel string
 	ts      string
 	emoji   string
 }
 
-// NewCmdReact returns the "react" command.
-func NewCmdReact(f *cmdutil.Factory) *cobra.Command {
-	opts := &reactOptions{factory: f}
+// NewCmdRemove returns the "react remove" subcommand.
+func NewCmdRemove(f *cmdutil.Factory) *cobra.Command {
+	opts := &removeOptions{factory: f}
 
 	cmd := &cobra.Command{
-		Use:   "react [<channel> <timestamp> <emoji>]",
-		Short: "React to a message",
-		Long: `Add an emoji reaction to a message.
+		Use:   "remove <channel> <timestamp> <emoji>",
+		Short: "Remove a reaction from a message",
+		Long: `Remove an emoji reaction from a message.
 
 The emoji should be in :emoji: format (colons are stripped automatically).
-Requires a bot token (xoxb-) with reactions:write scope.
-
-Use "react remove" to remove a reaction.`,
-		Example: `  slackbuzz react #general 1706000000.000000 :eyes:
-  slackbuzz react #general 1706000000.000000 :white_check_mark:
-  slackbuzz react #general 1706000000.000000 thumbsup
-  slackbuzz react remove #general 1706000000.000000 :eyes:`,
+Requires a bot token (xoxb-) with reactions:write scope.`,
+		Example: `  slackbuzz react remove #general 1706000000.000000 :eyes:
+  slackbuzz react remove #general 1706000000.000000 thumbsup`,
 		Args:              cobra.ExactArgs(3),
 		PersistentPreRunE: cmdutil.NeedsBotToken(f),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.channel = args[0]
 			opts.ts = args[1]
 			opts.emoji = args[2]
-			return reactRun(opts)
+			return removeRun(opts)
 		},
 	}
-
-	cmd.AddCommand(NewCmdRemove(f))
 
 	return cmd
 }
 
-func reactRun(opts *reactOptions) error {
+func removeRun(opts *removeOptions) error {
 	ios := opts.factory.IOStreams
 	cs := ios.ColorScheme()
 
@@ -64,7 +58,6 @@ func reactRun(opts *reactOptions) error {
 		return err
 	}
 
-	// Strip colons from emoji name
 	emoji := strings.Trim(opts.emoji, ":")
 
 	ref := slack.ItemRef{
@@ -72,11 +65,11 @@ func reactRun(opts *reactOptions) error {
 		Timestamp: opts.ts,
 	}
 
-	if err := client.Slack.AddReaction(emoji, ref); err != nil {
-		return fmt.Errorf("failed to add reaction: %w", err)
+	if err := client.Slack.RemoveReaction(emoji, ref); err != nil {
+		return fmt.Errorf("failed to remove reaction: %w", err)
 	}
 
-	fmt.Fprintf(ios.Out, "%s Reacted with :%s: to message %s in %s\n",
+	fmt.Fprintf(ios.Out, "%s Removed :%s: from message %s in %s\n",
 		cs.Green("✓"), emoji, opts.ts, opts.channel)
 	return nil
 }

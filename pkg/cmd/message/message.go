@@ -17,6 +17,8 @@ func NewCmdMessage(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(NewCmdSend(f))
 	cmd.AddCommand(NewCmdList(f))
 	cmd.AddCommand(NewCmdSearch(f))
+	cmd.AddCommand(NewCmdEdit(f))
+	cmd.AddCommand(NewCmdDelete(f))
 
 	return cmd
 }

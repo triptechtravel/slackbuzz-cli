@@ -1,0 +1,100 @@
+package message
+
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+	"github.com/triptechtravel/slackbuzz-cli/internal/api"
+	"github.com/triptechtravel/slackbuzz-cli/internal/prompter"
+	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
+)
+
+type deleteOptions struct {
+	factory *cmdutil.Factory
+	channel string
+	ts      string
+	confirm bool
+	json    cmdutil.JSONFlags
+}
+
+// NewCmdDelete returns the "message delete" command.
+func NewCmdDelete(f *cmdutil.Factory) *cobra.Command {
+	opts := &deleteOptions{factory: f}
+
+	cmd := &cobra.Command{
+		Use:   "delete <channel> <timestamp>",
+		Short: "Delete a message",
+		Long: `Delete a Slack message by channel and timestamp.
+
+Prompts for confirmation in interactive mode.
+In non-interactive (piped) mode, --confirm is required.`,
+		Example: `  # Delete with confirmation prompt
+  slackbuzz message delete #general 1706000000.000000
+
+  # Delete without prompt (scripting)
+  slackbuzz message delete #general 1706000000.000000 --confirm`,
+		Args:              cobra.ExactArgs(2),
+		PersistentPreRunE: cmdutil.NeedsAuth(f),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			opts.channel = args[0]
+			opts.ts = args[1]
+			return deleteRun(opts)
+		},
+	}
+
+	cmd.Flags().BoolVar(&opts.confirm, "confirm", false, "Skip confirmation prompt")
+	cmdutil.AddJSONFlags(cmd, &opts.json)
+
+	return cmd
+}
+
+func deleteRun(opts *deleteOptions) error {
+	ios := opts.factory.IOStreams
+	cs := ios.ColorScheme()
+
+	client, err := opts.factory.DefaultClient()
+	if err != nil {
+		return err
+	}
+
+	resolver := api.NewResolver(client.Slack)
+
+	channelID, err := resolver.ResolveChannel(opts.channel)
+	if err != nil {
+		return err
+	}
+
+	if !opts.confirm {
+		if !ios.IsTerminal() {
+			return fmt.Errorf("--confirm is required in non-interactive mode")
+		}
+		p := prompter.New(ios)
+		confirmed, promptErr := p.Confirm(
+			fmt.Sprintf("Delete message %s in %s?", opts.ts, opts.channel), false)
+		if promptErr != nil {
+			return promptErr
+		}
+		if !confirmed {
+			fmt.Fprintln(ios.Out, "Cancelled.")
+			return nil
+		}
+	}
+
+	_, _, err = client.Slack.DeleteMessage(channelID, opts.ts)
+	if err != nil {
+		return fmt.Errorf("%s", api.FormatError(err))
+	}
+
+	if opts.json.WantsJSON() {
+		result := map[string]string{
+			"channel":   channelID,
+			"timestamp": opts.ts,
+			"action":    "deleted",
+		}
+		return opts.json.OutputJSON(ios.Out, result)
+	}
+
+	fmt.Fprintf(ios.Out, "%s Message %s in %s deleted\n",
+		cs.Green("✓"), opts.ts, cs.Bold(opts.channel))
+	return nil
+}

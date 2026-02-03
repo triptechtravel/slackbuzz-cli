@@ -111,9 +111,6 @@ func listRun(opts *listOptions) error {
 		tp.AddField(name)
 		tp.AddField(fmt.Sprintf("%d members", ch.NumMembers))
 		purpose := ch.Purpose.Value
-		if len(purpose) > 60 {
-			purpose = purpose[:57] + "..."
-		}
 		tp.AddField(cs.Gray(purpose))
 		tp.EndRow()
 	}
