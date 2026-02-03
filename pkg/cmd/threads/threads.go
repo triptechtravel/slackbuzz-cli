@@ -117,9 +117,6 @@ func threadsRun(opts *threadsOptions) error {
 		yourReply := ""
 		if match.Username == userName || match.User == userID {
 			yourReply = match.Text
-			if len(yourReply) > 100 {
-				yourReply = text.Truncate(yourReply, 100)
-			}
 		}
 
 		item := threadItem{
@@ -139,14 +136,16 @@ func threadsRun(opts *threadsOptions) error {
 		return opts.json.OutputJSON(ios.Out, items)
 	}
 
+	// Reverse items so most recent is at the bottom (natural terminal reading order)
+	for i, j := 0, len(items)-1; i < j; i, j = i+1, j-1 {
+		items[i], items[j] = items[j], items[i]
+	}
+
 	for _, item := range items {
 		ts := activity.ParseSlackTimestamp(item.Timestamp)
 		timeStr := text.RelativeTime(ts)
 
 		rootText := text.FormatSlackText(item.RootText)
-		if len(rootText) > 100 {
-			rootText = text.Truncate(rootText, 100)
-		}
 
 		fmt.Fprintf(ios.Out, "  #%-18s %s    %s: %q\n",
 			cs.Cyan(item.Channel),

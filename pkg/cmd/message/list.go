@@ -138,9 +138,6 @@ func listRun(opts *listOptions) error {
 
 		timeStr := text.RelativeTime(ts)
 		msgText := text.FormatSlackText(msg.Text)
-		if len(msgText) > 200 {
-			msgText = text.Truncate(msgText, 200)
-		}
 
 		deeplink := text.SlackDeeplink(teamID, channelID, text.FormatMessageTS(msg.Timestamp), "")
 		tsDisplay := msg.Timestamp

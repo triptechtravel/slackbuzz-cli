@@ -169,6 +169,11 @@ func activityRun(opts *activityOptions) error {
 		return opts.json.OutputJSON(ios.Out, items)
 	}
 
+	// Reverse items so most recent is at the bottom (natural terminal reading order)
+	for i, j := 0, len(items)-1; i < j; i, j = i+1, j-1 {
+		items[i], items[j] = items[j], items[i]
+	}
+
 	// Render TTY output
 	for _, item := range items {
 		ts := ParseSlackTimestamp(item.Timestamp)
@@ -204,9 +209,6 @@ func activityRun(opts *activityOptions) error {
 		)
 
 		msgText := text.FormatSlackText(item.Text)
-		if len(msgText) > 200 {
-			msgText = text.Truncate(msgText, 200)
-		}
 		fmt.Fprintf(ios.Out, "             %s\n", msgText)
 
 		// Show reactions inline

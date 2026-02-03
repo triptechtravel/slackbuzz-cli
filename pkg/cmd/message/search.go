@@ -116,9 +116,6 @@ func searchRun(opts *searchOptions) error {
 		}
 
 		msgText := text.FormatSlackText(match.Text)
-		if len(msgText) > 200 {
-			msgText = text.Truncate(msgText, 200)
-		}
 
 		deeplink := text.SlackDeeplink(teamID, match.Channel.ID, text.FormatMessageTS(match.Timestamp), "")
 		channelDisplay := "#" + channelName
