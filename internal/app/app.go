@@ -1,8 +1,10 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/triptechtravel/slackbuzz-cli/internal/api"
 	"github.com/triptechtravel/slackbuzz-cli/internal/iostreams"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/root"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
@@ -19,6 +21,14 @@ func Run() int {
 		if cmdutil.IsSilentError(err) {
 			return 1
 		}
+
+		// Auth expired (401 from Slack API)
+		var authExpired *api.AuthExpiredError
+		if errors.As(err, &authExpired) {
+			fmt.Fprintln(ios.ErrOut, authExpired.Error())
+			return 4
+		}
+
 		if cmdutil.IsAuthError(err) {
 			fmt.Fprintln(ios.ErrOut, err.Error())
 			return 4

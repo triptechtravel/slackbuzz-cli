@@ -15,7 +15,7 @@ type Config struct {
 
 // ConfigDir returns the path to the config directory (~/.config/slack).
 func ConfigDir() string {
-	if dir := os.Getenv("SLACK_CONFIG_DIR"); dir != "" {
+	if dir := os.Getenv("SLACKBUZZ_CONFIG_DIR"); dir != "" {
 		return dir
 	}
 	home, _ := os.UserHomeDir()

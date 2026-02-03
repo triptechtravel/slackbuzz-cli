@@ -1,6 +1,32 @@
 package api
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+// AuthExpiredError indicates the token has been revoked or expired (401 response).
+type AuthExpiredError struct{}
+
+func (e *AuthExpiredError) Error() string {
+	return "authentication expired or revoked. Run 'slackbuzz auth login' to re-authenticate"
+}
+
+// IsAuthExpired checks if an error is an AuthExpiredError.
+func IsAuthExpired(err error) bool {
+	var ae *AuthExpiredError
+	return errors.As(err, &ae)
+}
+
+// IsAuthRelatedSlackError returns true if the Slack API error string indicates
+// an authentication problem (invalid_auth, token_revoked, account_inactive, not_authed).
+func IsAuthRelatedSlackError(slackErr string) bool {
+	switch slackErr {
+	case "invalid_auth", "token_revoked", "account_inactive", "not_authed":
+		return true
+	}
+	return false
+}
 
 // SlackErrorMessage maps Slack API error codes to user-friendly messages.
 func SlackErrorMessage(slackErr string) string {

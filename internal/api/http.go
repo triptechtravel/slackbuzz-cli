@@ -26,6 +26,12 @@ func (t *rateLimitTransport) RoundTrip(req *http.Request) (*http.Response, error
 
 	t.rl.Update(resp)
 
+	// Detect 401 and return AuthExpiredError
+	if resp.StatusCode == 401 {
+		resp.Body.Close()
+		return nil, &AuthExpiredError{}
+	}
+
 	// Retry once on 429
 	if t.rl.ShouldRetry(resp) {
 		resp.Body.Close()
