@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // AuthExpiredError indicates the token has been revoked or expired (401 response).
@@ -60,3 +61,26 @@ func FormatError(err error) string {
 	}
 	return SlackErrorMessage(err.Error())
 }
+
+// FormatSendError produces a context-aware error message for message send failures.
+// The target is the original channel/user argument from the command.
+func FormatSendError(err error, target string) string {
+	if err == nil {
+		return ""
+	}
+	errStr := err.Error()
+
+	if errStr == "missing_scope" {
+		isDM := strings.HasPrefix(target, "@") || isUserID(target) ||
+			(!strings.HasPrefix(target, "#") && !isChannelID(target))
+		if isDM {
+			return "Missing Slack scope for DMs. Ensure your user token has: im:write, chat:write\n" +
+				"  Check scopes at api.slack.com/apps > OAuth & Permissions"
+		}
+		return "Missing scope for posting. Ensure your token has: chat:write\n" +
+			"  Check scopes at api.slack.com/apps > OAuth & Permissions"
+	}
+
+	return SlackErrorMessage(errStr)
+}
+

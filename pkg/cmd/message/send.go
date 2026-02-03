@@ -26,14 +26,24 @@ func NewCmdSend(f *cmdutil.Factory) *cobra.Command {
 	opts := &sendOptions{factory: f}
 
 	cmd := &cobra.Command{
-		Use:   "send <channel> [text]",
-		Short: "Send a message to a channel",
+		Use:   "send <channel|user> [text]",
+		Short: "Send a message to a channel or DM",
 		Long: `Post a message to a Slack channel, DM, or thread.
 
-The channel argument accepts #channel-name or a channel ID.
+The first argument accepts a #channel-name, channel ID, @username, or user ID.
+To send a DM, use a username, @username, or user ID as the channel argument.
 If text is omitted, reads from stdin (for piping).`,
-		Example: `  # Send a message
+		Example: `  # Send a message to a channel
   slackbuzz message send #general "Hello, world!"
+
+  # Send a DM by @username
+  slackbuzz message send @sarah "Quick question about the API"
+
+  # Send a DM by username (no @ needed)
+  slackbuzz message send herman "Hey, got a minute?"
+
+  # Send a DM by user ID
+  slackbuzz message send U02P3QC5H24 "Direct message by ID"
 
   # Send to a thread
   slackbuzz message send #general "Reply here" --thread-ts 1234567890.123456
@@ -78,8 +88,13 @@ func sendRun(opts *sendOptions) error {
 
 	resolver := api.NewResolver(client.Slack)
 
-	// Resolve channel name to ID
-	channelID, err := resolver.ResolveChannel(opts.channel)
+	// Resolve target to a channel ID — auto-detect DMs vs channels
+	var channelID string
+	if api.LooksLikeUser(opts.channel) {
+		channelID, err = resolver.ResolveDM(opts.channel)
+	} else {
+		channelID, err = resolver.ResolveChannel(opts.channel)
+	}
 	if err != nil {
 		return err
 	}
@@ -119,7 +134,7 @@ func sendRun(opts *sendOptions) error {
 	// Post the message
 	respChannel, respTS, err := client.Slack.PostMessage(channelID, msgOpts...)
 	if err != nil {
-		return fmt.Errorf("%s", api.FormatError(err))
+		return fmt.Errorf("%s", api.FormatSendError(err, opts.channel))
 	}
 
 	if opts.json.WantsJSON() {

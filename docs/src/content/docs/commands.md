@@ -224,16 +224,24 @@ Quick actions:
   Edit:   slackbuzz message edit #general <ts> "new text"
 ```
 
-### `message send <channel> <text>`
+### `message send <channel|user> <text>`
 
-Send a message to a channel or DM.
+Send a message to a channel or DM. The first argument accepts a `#channel-name`, channel ID, `@username`, username, or user ID. When the target looks like a user, the CLI automatically opens a DM conversation via `conversations.open`.
+
+**DM sending requires `im:write` and `chat:write` user token scopes.** Apps created with `slackbuzz app create` include these scopes by default. For existing apps, add the scopes at api.slack.com/apps > OAuth & Permissions.
 
 ```sh
 # Send to a channel
 slackbuzz message send #general "Hello from the terminal!"
 
-# Send a DM
+# Send a DM by @username
 slackbuzz message send @sarah "Quick question about the API"
+
+# Send a DM by username (no @ needed)
+slackbuzz message send herman "Hey, got a minute?"
+
+# Send a DM by user ID
+slackbuzz message send U02P3QC5H24 "Direct message by ID"
 
 # Reply in a thread
 slackbuzz message send #general "Fixed!" --thread-ts 1706000000.000000
@@ -242,6 +250,7 @@ slackbuzz message send #general "Fixed!" --thread-ts 1706000000.000000
 | Flag | Description |
 |------|-------------|
 | `--thread-ts TIMESTAMP` | Send as a thread reply |
+| `--as-bot` | Send as the bot instead of your user account |
 
 ### `message edit <channel> <timestamp> [new-text]`
 

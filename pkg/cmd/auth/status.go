@@ -90,5 +90,25 @@ func statusRun(f *cmdutil.Factory) error {
 	}
 	fmt.Fprintln(ios.Out)
 
+	// Capabilities section
+	fmt.Fprintln(ios.Out)
+	fmt.Fprintf(ios.Out, "  %s\n", cs.Bold("Capabilities:"))
+
+	botValid := botErr == nil && botToken != ""
+	userValid := userErr == nil && userToken != ""
+
+	if botValid {
+		fmt.Fprintf(ios.Out, "    Bot:  read channels, post messages, reactions, list users\n")
+	}
+	if userValid {
+		fmt.Fprintf(ios.Out, "    User: search, DMs, stars, profile, send messages\n")
+	}
+	if !userValid {
+		fmt.Fprintf(ios.Out, "    %s User token not set — search, DMs, and stars unavailable\n", cs.Yellow("!"))
+		fmt.Fprintf(ios.Out, "    %s Add with: slackbuzz auth login\n", cs.Gray(" "))
+	} else {
+		fmt.Fprintf(ios.Out, "    %s DM sending requires im:write and chat:write user scopes\n", cs.Gray("Hint:"))
+	}
+
 	return nil
 }

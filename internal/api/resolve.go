@@ -129,6 +129,39 @@ func (r *Resolver) loadChannels() error {
 	return nil
 }
 
+// ResolveDM takes a username, @username, or user ID and returns a DM channel ID.
+// It resolves the user and opens (or retrieves) a DM conversation via conversations.open.
+func (r *Resolver) ResolveDM(nameOrID string) (string, error) {
+	userID, err := r.ResolveUser(nameOrID)
+	if err != nil {
+		return "", err
+	}
+
+	ch, _, _, err := r.client.OpenConversation(&slack.OpenConversationParameters{
+		Users: []string{userID},
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to open DM with %q: %w", nameOrID, err)
+	}
+	return ch.ID, nil
+}
+
+// LooksLikeUser returns true if the target looks like a user reference
+// (starts with @, starts with U/W, or is not #-prefixed and not a channel ID).
+func LooksLikeUser(target string) bool {
+	if strings.HasPrefix(target, "@") {
+		return true
+	}
+	if isUserID(target) {
+		return true
+	}
+	if strings.HasPrefix(target, "#") || isChannelID(target) {
+		return false
+	}
+	// Bare name — assume user if it doesn't look like a channel ID
+	return true
+}
+
 func (r *Resolver) loadUsers() error {
 	users, err := r.client.GetUsers()
 	if err != nil {
@@ -140,8 +173,16 @@ func (r *Resolver) loadUsers() error {
 	for _, u := range users {
 		if !u.Deleted {
 			r.users[u.Name] = u.ID
+			lower := strings.ToLower(u.Name)
+			if lower != u.Name {
+				r.users[lower] = u.ID
+			}
 			if u.Profile.DisplayName != "" {
 				r.users[u.Profile.DisplayName] = u.ID
+				lowerDisplay := strings.ToLower(u.Profile.DisplayName)
+				if lowerDisplay != u.Profile.DisplayName {
+					r.users[lowerDisplay] = u.ID
+				}
 			}
 		}
 	}
