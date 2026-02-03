@@ -37,7 +37,7 @@ brews:
       owner: triptechtravel
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    skip_upload: true
+    skip_upload: false
     homepage: "https://github.com/triptechtravel/slackbuzz-cli"
     description: "CLI tool for Slack messaging, channel management, and search"
     license: "MIT"
