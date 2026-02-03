@@ -168,17 +168,29 @@ func listRun(opts *listOptions) error {
 		conversations[i], conversations[j] = conversations[j], conversations[i]
 	}
 
-	for _, conv := range conversations {
+	for i, conv := range conversations {
 		ts := activity.ParseSlackTimestamp(conv.LastTime)
 		timeStr := text.RelativeTime(ts)
 
-		fmt.Fprintf(ios.Out, "  @%-14s %s    last: %-10s %q\n",
+		fmt.Fprintf(ios.Out, "  @%-14s %s  %s\n",
 			cs.Bold(conv.User),
 			cs.Gray(text.Pluralize(conv.MessageCount, "message")),
 			cs.Gray(timeStr),
-			conv.LastMessage,
 		)
+		fmt.Fprintf(ios.Out, "    last: %q\n", text.Truncate(conv.LastMessage, 80))
+
+		if i < len(conversations)-1 {
+			fmt.Fprintln(ios.Out)
+		}
 	}
+
+	// Quick actions footer
+	fmt.Fprintln(ios.Out)
+	fmt.Fprintln(ios.Out, cs.Gray("---"))
+	fmt.Fprintln(ios.Out, cs.Gray("Quick actions:"))
+	fmt.Fprintf(ios.Out, "  %s  slackbuzz message list @<user>\n", cs.Gray("Read:"))
+	fmt.Fprintf(ios.Out, "  %s  slackbuzz message send @<user> \"text\"\n", cs.Gray("Reply:"))
+	fmt.Fprintf(ios.Out, "  %s  slackbuzz later add @<user> <ts>\n", cs.Gray("Save:"))
 
 	return nil
 }

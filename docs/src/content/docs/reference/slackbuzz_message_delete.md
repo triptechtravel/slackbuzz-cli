@@ -31,6 +31,7 @@ slackbuzz message delete <channel> <timestamp> [flags]
 ### Options
 
 ```
+      --as-bot            Delete as the bot instead of your user account
       --confirm           Skip confirmation prompt
   -h, --help              help for delete
       --jq string         Filter JSON output using a jq expression

@@ -163,6 +163,13 @@ func listRun(opts *listOptions) error {
 		fmt.Fprintln(ios.Out)
 	}
 
+	// Quick actions footer
+	fmt.Fprintln(ios.Out, cs.Gray("---"))
+	fmt.Fprintln(ios.Out, cs.Gray("Quick actions:"))
+	fmt.Fprintf(ios.Out, "  %s  slackbuzz message send %s \"text\" --thread-ts <ts>\n", cs.Gray("Reply:"), opts.channel)
+	fmt.Fprintf(ios.Out, "  %s  slackbuzz react %s <ts> :emoji:\n", cs.Gray("React:"), opts.channel)
+	fmt.Fprintf(ios.Out, "  %s  slackbuzz message edit %s <ts> \"new text\"\n", cs.Gray("Edit:"), opts.channel)
+
 	return nil
 }
 

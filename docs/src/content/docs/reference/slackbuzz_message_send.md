@@ -37,6 +37,7 @@ slackbuzz message send <channel> [text] [flags]
 ### Options
 
 ```
+      --as-bot             Send as the bot instead of your user account
   -h, --help               help for send
       --jq string          Filter JSON output using a jq expression
       --json               Output JSON

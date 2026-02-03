@@ -31,6 +31,7 @@ slackbuzz message edit <channel> <timestamp> [new-text] [flags]
 ### Options
 
 ```
+      --as-bot            Edit as the bot instead of your user account
   -h, --help              help for edit
       --jq string         Filter JSON output using a jq expression
       --json              Output JSON

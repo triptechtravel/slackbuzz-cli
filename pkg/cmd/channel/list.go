@@ -115,5 +115,17 @@ func listRun(opts *listOptions) error {
 		tp.EndRow()
 	}
 
-	return tp.Render()
+	if err := tp.Render(); err != nil {
+		return err
+	}
+
+	// Quick actions footer
+	fmt.Fprintln(ios.Out)
+	fmt.Fprintln(ios.Out, cs.Gray("---"))
+	fmt.Fprintln(ios.Out, cs.Gray("Quick actions:"))
+	fmt.Fprintf(ios.Out, "  %s  slackbuzz channel info <channel>\n", cs.Gray("Info:"))
+	fmt.Fprintf(ios.Out, "  %s  slackbuzz message list <channel>\n", cs.Gray("Read:"))
+	fmt.Fprintf(ios.Out, "  %s  slackbuzz message send <channel> \"text\"\n", cs.Gray("Send:"))
+
+	return nil
 }

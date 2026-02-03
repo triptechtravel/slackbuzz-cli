@@ -169,5 +169,12 @@ func searchRun(opts *searchOptions) error {
 				result.Paging.Page, result.Paging.Pages, result.Total, result.Paging.Page+1)))
 	}
 
+	// Quick actions footer
+	fmt.Fprintln(ios.Out, cs.Gray("---"))
+	fmt.Fprintln(ios.Out, cs.Gray("Quick actions:"))
+	fmt.Fprintf(ios.Out, "  %s  slackbuzz message send <channel> \"text\" --thread-ts <ts>\n", cs.Gray("Reply:"))
+	fmt.Fprintf(ios.Out, "  %s  slackbuzz react <channel> <ts> :emoji:\n", cs.Gray("React:"))
+	fmt.Fprintf(ios.Out, "  %s  slackbuzz later add <channel> <ts>\n", cs.Gray("Save:"))
+
 	return nil
 }

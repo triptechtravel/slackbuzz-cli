@@ -98,11 +98,17 @@ slackbuzz dm list --json
 | `--json` | Output as JSON |
 | `--jq EXPR` | Filter JSON output with a jq expression |
 
-Reading and sending individual DMs already works via the message commands:
+Each conversation is shown with the user, message count, and relative time on the first line, followed by a truncated preview of the last message. A quick-actions footer suggests next steps:
 
-```sh
-slackbuzz message list @sarah
-slackbuzz message send @sarah "hey"
+```
+  @sarah         3 messages  2 hours ago
+    last: "truncated message preview..."
+
+---
+Quick actions:
+  Read:   slackbuzz message list @<user>
+  Reply:  slackbuzz message send @<user> "text"
+  Save:   slackbuzz later add @<user> <ts>
 ```
 
 ---
@@ -208,6 +214,16 @@ slackbuzz message list #general --limit 10
 | `--json` | Output as JSON |
 | `--jq EXPR` | Filter JSON output with a jq expression |
 
+Output includes a quick-actions footer with contextual commands:
+
+```
+---
+Quick actions:
+  Reply:  slackbuzz message send #general "text" --thread-ts <ts>
+  React:  slackbuzz react #general <ts> :emoji:
+  Edit:   slackbuzz message edit #general <ts> "new text"
+```
+
 ### `message send <channel> <text>`
 
 Send a message to a channel or DM.
@@ -276,6 +292,16 @@ slackbuzz message search "deploy" --sort score --page 2
 | `--limit N` | Maximum number of results per page |
 | `--json` | Output as JSON |
 | `--jq EXPR` | Filter JSON output with a jq expression |
+
+Results include pagination info and a quick-actions footer:
+
+```
+---
+Quick actions:
+  Reply:  slackbuzz message send <channel> "text" --thread-ts <ts>
+  React:  slackbuzz react <channel> <ts> :emoji:
+  Save:   slackbuzz later add <channel> <ts>
+```
 
 ---
 
@@ -377,6 +403,16 @@ slackbuzz channel list --json
 |------|-------------|
 | `--json` | Output as JSON |
 | `--jq EXPR` | Filter JSON output with a jq expression |
+
+Output includes a quick-actions footer:
+
+```
+---
+Quick actions:
+  Info:   slackbuzz channel info <channel>
+  Read:   slackbuzz message list <channel>
+  Send:   slackbuzz message send <channel> "text"
+```
 
 ### `channel info <channel>`
 
