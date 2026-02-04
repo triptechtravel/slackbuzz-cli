@@ -179,22 +179,65 @@ func (r *Resolver) loadUsers() error {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	// Track partial (first-name) candidates for second pass.
+	// Key: lowercased first name, Value: set of user IDs that share it.
+	type candidate struct {
+		ids map[string]bool
+	}
+	partials := make(map[string]*candidate)
+
 	for _, u := range users {
-		if !u.Deleted {
-			r.users[u.Name] = u.ID
-			lower := strings.ToLower(u.Name)
-			if lower != u.Name {
-				r.users[lower] = u.ID
-			}
-			if u.Profile.DisplayName != "" {
-				r.users[u.Profile.DisplayName] = u.ID
-				lowerDisplay := strings.ToLower(u.Profile.DisplayName)
-				if lowerDisplay != u.Profile.DisplayName {
-					r.users[lowerDisplay] = u.ID
-				}
+		if u.Deleted {
+			continue
+		}
+		r.users[u.Name] = u.ID
+		lower := strings.ToLower(u.Name)
+		if lower != u.Name {
+			r.users[lower] = u.ID
+		}
+		if u.Profile.DisplayName != "" {
+			r.users[u.Profile.DisplayName] = u.ID
+			lowerDisplay := strings.ToLower(u.Profile.DisplayName)
+			if lowerDisplay != u.Profile.DisplayName {
+				r.users[lowerDisplay] = u.ID
 			}
 		}
+
+		// Collect partial name from multi-word display names (e.g. "herman gorbatovskii" → "herman")
+		if u.Profile.DisplayName != "" {
+			if parts := strings.Fields(u.Profile.DisplayName); len(parts) > 1 {
+				first := strings.ToLower(parts[0])
+				if partials[first] == nil {
+					partials[first] = &candidate{ids: make(map[string]bool)}
+				}
+				partials[first].ids[u.ID] = true
+			}
+		}
+		// Collect partial name from dotted usernames (e.g. "herman.gorbatovskii" → "herman")
+		if dotIdx := strings.IndexByte(lower, '.'); dotIdx > 0 {
+			first := lower[:dotIdx]
+			if partials[first] == nil {
+				partials[first] = &candidate{ids: make(map[string]bool)}
+			}
+			partials[first].ids[u.ID] = true
+		}
 	}
+
+	// Add unambiguous partial names (only when a single user owns the first name
+	// and no exact-match key already exists).
+	for name, cand := range partials {
+		if len(cand.ids) != 1 {
+			continue // ambiguous — multiple users share this first name
+		}
+		if _, exists := r.users[name]; exists {
+			continue // an exact username/display-name already claims this key
+		}
+		for id := range cand.ids {
+			r.users[name] = id
+		}
+	}
+
 	r.usersLoaded = true
 	return nil
 }

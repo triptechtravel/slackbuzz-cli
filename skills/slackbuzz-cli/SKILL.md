@@ -214,12 +214,29 @@ slackbuzz message send '#channel' '@michelle @herman please review this'
 slackbuzz notify #general --message '@alice maintenance window starting'
 ```
 
+### First-name resolution
+
+When a user's Slack username is dotted (`herman.gorbatovskii`) or their display name has multiple words (`Herman Gorbatovskii`), the CLI also indexes the **first name** as a shorthand. Writing `@herman` will resolve to that user as long as the first name is unambiguous (only one user has that first name). If multiple users share a first name, use the full username or display name instead.
+
+```bash
+# These all resolve to the same user:
+slackbuzz message send '#dev' '@herman.gorbatovskii check this'   # full username
+slackbuzz message send '#dev' '@herman gorbatovskii check this'   # full display name
+slackbuzz message send '#dev' '@herman, check this'               # first-name shorthand
+```
+
 Unrecognized names are left as-is (no error). Use `slackbuzz user list` to discover available usernames if a mention isn't resolving.
+
+## Shell Escaping
+
+The CLI automatically strips common shell escape artifacts from message text before sending. For example, zsh's history expansion can turn `!` into `\!` when passed through double-quoted strings. The CLI detects and cleans these so the message arrives correctly in Slack.
 
 ## Key Behaviors
 
 - **DM auto-detection**: `@user`, `U...` IDs, and bare names auto-resolve to DM channels (for the channel/target argument)
 - **@mentions in message body**: Auto-resolved from `@name` to Slack's `<@USERID>` format before posting
+- **First-name shorthand**: `@herman` resolves to `herman.gorbatovskii` or `Herman Gorbatovskii` when unambiguous
+- **Shell unescape**: Common shell artifacts like `\!` are cleaned before sending
 - **Case-insensitive resolution**: User lookup matches display names and usernames regardless of case
 - **Dual tokens**: Bot token for channel ops, user token for search/DMs/status
 - **Deeplinks**: Output includes clickable Slack deeplinks

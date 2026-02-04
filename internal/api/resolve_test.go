@@ -135,6 +135,83 @@ func TestResolveMentions(t *testing.T) {
 			wantText:      "email me at user@alice.com",
 			wantUnchanged: true,
 		},
+		// Partial first-name matching (simulates keys added by loadUsers)
+		{
+			name: "full display name with space resolves",
+			users: map[string]string{
+				"herman.gorbatovskii": "U006",
+				"herman gorbatovskii": "U006",
+				"herman":              "U006",
+			},
+			text:         "@herman gorbatovskii check this",
+			wantText:     "<@U006> check this",
+			wantResolved: []string{"herman gorbatovskii"},
+		},
+		{
+			name: "partial first name resolves when followed by punctuation",
+			users: map[string]string{
+				"herman.gorbatovskii": "U006",
+				"herman gorbatovskii": "U006",
+				"herman":              "U006",
+			},
+			text:         "hey @herman, check this",
+			wantText:     "hey <@U006>, check this",
+			wantResolved: []string{"herman"},
+		},
+		{
+			name: "partial first name from dotted username",
+			users: map[string]string{
+				"john.smith": "U007",
+				"john":       "U007",
+			},
+			text:         "ask @john about it",
+			wantText:     "ask <@U007> about it",
+			wantResolved: []string{"john"},
+		},
+		{
+			name: "full dotted username preferred over partial",
+			users: map[string]string{
+				"john.smith": "U007",
+				"john":       "U007",
+			},
+			text:         "ask @john.smith about it",
+			wantText:     "ask <@U007> about it",
+			wantResolved: []string{"john.smith"},
+		},
+		{
+			name: "ambiguous first name not resolved",
+			users: map[string]string{
+				"herman.gorbatovskii": "U006",
+				"herman gorbatovskii": "U006",
+				"herman.jones":        "U008",
+				// no "herman" partial — ambiguous across two users
+			},
+			text:          "hey @herman, check this",
+			wantText:      "hey @herman, check this",
+			wantUnchanged: true,
+		},
+		{
+			name: "partial first name at end of text",
+			users: map[string]string{
+				"sarah.connor": "U009",
+				"sarah":        "U009",
+			},
+			text:         "ping @sarah",
+			wantText:     "ping <@U009>",
+			wantResolved: []string{"sarah"},
+		},
+		{
+			name: "display name with space and partial both resolve in same message",
+			users: map[string]string{
+				"herman.gorbatovskii": "U006",
+				"herman gorbatovskii": "U006",
+				"herman":              "U006",
+				"alice":               "U001",
+			},
+			text:         "@herman and @alice please review",
+			wantText:     "<@U006> and <@U001> please review",
+			wantResolved: []string{"herman", "alice"},
+		},
 	}
 
 	for _, tt := range tests {

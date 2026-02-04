@@ -123,6 +123,9 @@ func sendRun(opts *sendOptions) error {
 		return fmt.Errorf("message text cannot be empty")
 	}
 
+	// Strip common shell escape artifacts (e.g. zsh history expansion turns ! into \!)
+	text = unescapeShellArtifacts(text)
+
 	// Resolve @mentions in message body
 	if strings.Contains(text, "@") {
 		resolved, names, err := resolver.ResolveMentions(text)
@@ -159,4 +162,13 @@ func sendRun(opts *sendOptions) error {
 	fmt.Fprintf(ios.Out, "%s Message sent to %s (ts: %s)\n",
 		cs.Green("✓"), cs.Bold(opts.channel), respTS)
 	return nil
+}
+
+// unescapeShellArtifacts removes common shell escape sequences that leak into
+// CLI arguments. For example, zsh's history expansion escapes ! as \! when
+// passed through double-quoted strings.
+func unescapeShellArtifacts(text string) string {
+	text = strings.ReplaceAll(text, `\!`, "!")
+	text = strings.ReplaceAll(text, `\?`, "?")
+	return text
 }
