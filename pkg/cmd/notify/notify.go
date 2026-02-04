@@ -73,6 +73,18 @@ func notifyRun(opts *notifyOptions) error {
 		return err
 	}
 
+	// Resolve @mentions in custom message text
+	message := opts.message
+	if message != "" && strings.Contains(message, "@") {
+		resolved, names, resolveErr := resolver.ResolveMentions(message)
+		if resolveErr == nil {
+			message = resolved
+			for _, name := range names {
+				fmt.Fprintf(ios.ErrOut, "Mentioning %s\n", cs.Bold("@"+name))
+			}
+		}
+	}
+
 	var blocks []slack.Block
 	var fallbackText string
 
@@ -86,9 +98,9 @@ func notifyRun(opts *notifyOptions) error {
 		if opts.status != "" {
 			fallbackText += fmt.Sprintf(" — %s", opts.status)
 		}
-	case opts.message != "":
-		blocks = buildMessageBlocks(opts.message)
-		fallbackText = opts.message
+	case message != "":
+		blocks = buildMessageBlocks(message)
+		fallbackText = message
 	}
 
 	msgOpts := []slack.MsgOption{

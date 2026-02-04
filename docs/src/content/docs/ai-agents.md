@@ -158,6 +158,20 @@ If you have the repo cloned locally, you can alternatively symlink the skill:
 make install-skill
 ```
 
+### @mention resolution
+
+`@name` mentions in message bodies are resolved automatically to Slack's `<@USERID>` format before posting. Agents can write natural `@username` mentions without manually looking up user IDs:
+
+```sh
+# Mentions are resolved automatically
+slackbuzz message send '#engineering' '@alice @bob please review PR #42'
+
+# Also works in notify
+slackbuzz notify #releases --message '@team v2.0 is live'
+```
+
+Unrecognized names pass through as-is. Use `slackbuzz user list --json` to discover available usernames.
+
 ## Tips
 
 - Use `--json` output when you need the agent to parse data programmatically

@@ -24,5 +24,5 @@ Post messages to channels, read channel history, and search messages.
 * [slackbuzz message edit](/slackbuzz-cli/reference/slackbuzz_message_edit/)	 - Edit a message
 * [slackbuzz message list](/slackbuzz-cli/reference/slackbuzz_message_list/)	 - List messages in a channel
 * [slackbuzz message search](/slackbuzz-cli/reference/slackbuzz_message_search/)	 - Search messages (requires user token)
-* [slackbuzz message send](/slackbuzz-cli/reference/slackbuzz_message_send/)	 - Send a message to a channel
+* [slackbuzz message send](/slackbuzz-cli/reference/slackbuzz_message_send/)	 - Send a message to a channel or DM
 

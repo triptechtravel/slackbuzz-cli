@@ -228,11 +228,16 @@ Quick actions:
 
 Send a message to a channel or DM. The first argument accepts a `#channel-name`, channel ID, `@username`, username, or user ID. When the target looks like a user, the CLI automatically opens a DM conversation via `conversations.open`.
 
+`@name` mentions in the message body are **resolved automatically** to Slack's `<@USERID>` format before posting. Usernames and display names are matched case-insensitively. Unrecognized names are left as-is. Resolved mentions are confirmed on stderr.
+
 **DM sending requires `im:write` and `chat:write` user token scopes.** Apps created with `slackbuzz app create` include these scopes by default. For existing apps, add the scopes at api.slack.com/apps > OAuth & Permissions.
 
 ```sh
 # Send to a channel
 slackbuzz message send #general "Hello from the terminal!"
+
+# Send with @mentions (auto-resolved to <@USERID>)
+slackbuzz message send #general "@alice @bob please review this PR"
 
 # Send a DM by @username
 slackbuzz message send @sarah "Quick question about the API"

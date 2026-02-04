@@ -202,36 +202,24 @@ slackbuzz user info @alice
 
 ## @Mentioning Users in Messages
 
-**IMPORTANT**: When mentioning users in channel messages, you MUST look up their Slack user ID first and use the `<@USERID>` format. Plain `@name` text will NOT ping anyone — it renders as literal text.
-
-### Step 1: Look up the user
+`@name` mentions in message bodies are **resolved automatically**. The CLI looks up usernames and display names (case-insensitive) and converts them to Slack's `<@USERID>` format before posting. Resolved mentions are confirmed on stderr.
 
 ```bash
-# Search by name (case-insensitive, matches username and display name)
-slackbuzz user list --json | jq '.[] | select(.real_name | test("michelle"; "i")) | {name, real_name, id}'
-
-# Or list all users and grep
-slackbuzz user list --json | jq '.[] | {name, real_name, id}'
-```
-
-### Step 2: Use `<@USERID>` in the message
-
-```bash
-# Correct — will actually ping the user
-slackbuzz message send '#channel' '<@U01LM9D2MPU> <@U02P3QC5H24> please review this'
-
-# WRONG — renders as plain text, no ping
+# Mentions are resolved automatically — these will ping the users
 slackbuzz message send '#channel' '@michelle @herman please review this'
+# → stderr: Mentioning @michelle
+# → stderr: Mentioning @herman
+
+# Also works in notify --message
+slackbuzz notify #general --message '@alice maintenance window starting'
 ```
 
-The `<@USERID>` format is Slack's native mention syntax. Always resolve names to IDs before composing messages that need to notify someone.
-
-**When the user says "message @someone"**: First run `slackbuzz user list --json | jq` to find the matching user ID, then use `<@ID>` in the message body.
+Unrecognized names are left as-is (no error). Use `slackbuzz user list` to discover available usernames if a mention isn't resolving.
 
 ## Key Behaviors
 
-- **DM auto-detection**: `@user`, `U...` IDs, and bare names auto-resolve to DM channels (for the channel/target argument, not message body)
-- **@mentions in message body**: Must use `<@USERID>` format — look up IDs with `slackbuzz user list --json` first
+- **DM auto-detection**: `@user`, `U...` IDs, and bare names auto-resolve to DM channels (for the channel/target argument)
+- **@mentions in message body**: Auto-resolved from `@name` to Slack's `<@USERID>` format before posting
 - **Case-insensitive resolution**: User lookup matches display names and usernames regardless of case
 - **Dual tokens**: Bot token for channel ops, user token for search/DMs/status
 - **Deeplinks**: Output includes clickable Slack deeplinks

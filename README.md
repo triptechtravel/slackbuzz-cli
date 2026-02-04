@@ -23,6 +23,7 @@ A command-line tool for working with Slack messages, channels, and cross-tool wo
 - **DM conversations** -- list and browse direct message conversations
 - **Slack deeplinks** -- clickable links that open items directly in the Slack app
 - **Emoji rendering** -- 1900+ emoji shortcodes rendered as Unicode, plus custom workspace emoji
+- **@mention resolution** -- `@name` in message bodies auto-resolved to Slack's `<@USERID>` format before posting
 - **ClickUp & GitHub enrichment** -- auto-detects `CU-` task IDs and GitHub PR/issue URLs in messages with actionable hints
 - **AI-friendly** -- structured `--json` output and `--jq` filtering for AI coding agents (Claude Code, Copilot, Cursor)
 - **JSON output** -- all list/view commands support `--json`, `--jq`, and `--template`

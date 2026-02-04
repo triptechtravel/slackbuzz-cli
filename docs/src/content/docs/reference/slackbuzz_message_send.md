@@ -5,24 +5,34 @@ description: "Auto-generated reference for slackbuzz message send"
 
 ## slackbuzz message send
 
-Send a message to a channel
+Send a message to a channel or DM
 
 ### Synopsis
 
 Post a message to a Slack channel, DM, or thread.
 
-The channel argument accepts #channel-name or a channel ID.
+The first argument accepts a #channel-name, channel ID, @username, or user ID.
+To send a DM, use a username, @username, or user ID as the channel argument.
 If text is omitted, reads from stdin (for piping).
 
 ```
-slackbuzz message send <channel> [text] [flags]
+slackbuzz message send <channel|user> [text] [flags]
 ```
 
 ### Examples
 
 ```
-  # Send a message
+  # Send a message to a channel
   slackbuzz message send #general "Hello, world!"
+
+  # Send a DM by @username
+  slackbuzz message send @sarah "Quick question about the API"
+
+  # Send a DM by username (no @ needed)
+  slackbuzz message send herman "Hey, got a minute?"
+
+  # Send a DM by user ID
+  slackbuzz message send U02P3QC5H24 "Direct message by ID"
 
   # Send to a thread
   slackbuzz message send #general "Reply here" --thread-ts 1234567890.123456

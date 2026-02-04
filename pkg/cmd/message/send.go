@@ -123,6 +123,17 @@ func sendRun(opts *sendOptions) error {
 		return fmt.Errorf("message text cannot be empty")
 	}
 
+	// Resolve @mentions in message body
+	if strings.Contains(text, "@") {
+		resolved, names, err := resolver.ResolveMentions(text)
+		if err == nil {
+			text = resolved
+			for _, name := range names {
+				fmt.Fprintf(ios.ErrOut, "Mentioning %s\n", cs.Bold("@"+name))
+			}
+		}
+	}
+
 	// Build message options
 	msgOpts := []slack.MsgOption{
 		slack.MsgOptionText(text, false),

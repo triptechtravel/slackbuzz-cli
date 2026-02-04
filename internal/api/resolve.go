@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 
@@ -11,11 +12,12 @@ import (
 // Resolver maps human-friendly channel names (#general) and user names (@alice)
 // to their Slack IDs. Results are cached for the lifetime of the process.
 type Resolver struct {
-	client   *slack.Client
-	mu       sync.Mutex
-	channels map[string]string // name → ID
-	users    map[string]string // name → ID
-	loaded   bool
+	client      *slack.Client
+	mu          sync.Mutex
+	channels    map[string]string // name → ID
+	users       map[string]string // name → ID
+	loaded      bool
+	usersLoaded bool
 }
 
 // NewResolver creates a new Resolver backed by the given Slack client.
@@ -163,6 +165,13 @@ func LooksLikeUser(target string) bool {
 }
 
 func (r *Resolver) loadUsers() error {
+	r.mu.Lock()
+	if r.usersLoaded {
+		r.mu.Unlock()
+		return nil
+	}
+	r.mu.Unlock()
+
 	users, err := r.client.GetUsers()
 	if err != nil {
 		return err
@@ -186,6 +195,7 @@ func (r *Resolver) loadUsers() error {
 			}
 		}
 	}
+	r.usersLoaded = true
 	return nil
 }
 
@@ -201,4 +211,192 @@ func isUserID(s string) bool {
 		return false
 	}
 	return s[0] == 'U' || s[0] == 'W'
+}
+
+// isWordChar returns true if the byte is a letter, digit, underscore, hyphen, or period.
+// These characters can appear in Slack usernames and display names.
+func isWordChar(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+		(c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.'
+}
+
+// ResolveMentions scans text for @name patterns and replaces resolved names
+// with Slack's <@USERID> format. Unresolved names are left as-is.
+// Returns the processed text, a list of resolved display names, and any API error.
+func (r *Resolver) ResolveMentions(text string) (string, []string, error) {
+	// Ensure users are loaded before scanning
+	if err := r.loadUsers(); err != nil {
+		return text, nil, err
+	}
+
+	// Build a sorted list of known names (longest first for greedy matching)
+	r.mu.Lock()
+	type sortedUser struct {
+		lower string
+		id    string
+	}
+	var sorted []sortedUser
+	seen := make(map[string]bool) // dedupe by ID+lower to avoid double entries
+	for name, id := range r.users {
+		lower := strings.ToLower(name)
+		key := id + "|" + lower
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		sorted = append(sorted, sortedUser{lower: lower, id: id})
+	}
+	r.mu.Unlock()
+
+	sort.Slice(sorted, func(i, j int) bool {
+		return len(sorted[i].lower) > len(sorted[j].lower)
+	})
+
+	// Find all @mention positions
+	type mentionPos struct {
+		start int
+		end   int
+		name  string
+		id    string
+	}
+
+	textLower := strings.ToLower(text)
+	var mentions []mentionPos
+
+	for i := 0; i < len(text); i++ {
+		if text[i] != '@' || i+1 >= len(text) {
+			continue
+		}
+		// Skip if already inside a Slack mention like <@U...>
+		if i > 0 && text[i-1] == '<' {
+			continue
+		}
+		afterAt := textLower[i+1:]
+		for _, su := range sorted {
+			if !strings.HasPrefix(afterAt, su.lower) {
+				continue
+			}
+			endPos := i + 1 + len(su.lower)
+			if endPos < len(text) && isWordChar(text[endPos]) {
+				continue
+			}
+			mentions = append(mentions, mentionPos{
+				start: i,
+				end:   endPos,
+				name:  text[i+1 : endPos], // preserve original casing for display
+				id:    su.id,
+			})
+			i = endPos - 1
+			break
+		}
+	}
+
+	if len(mentions) == 0 {
+		return text, nil, nil
+	}
+
+	// Rebuild the text with Slack mention format
+	var b strings.Builder
+	var resolved []string
+	pos := 0
+
+	for _, m := range mentions {
+		b.WriteString(text[pos:m.start])
+		b.WriteString("<@")
+		b.WriteString(m.id)
+		b.WriteString(">")
+		resolved = append(resolved, m.name)
+		pos = m.end
+	}
+	b.WriteString(text[pos:])
+
+	return b.String(), resolved, nil
+}
+
+// FindSimilarUsers returns usernames that are similar to the given name,
+// using prefix matching and simple edit-distance heuristics.
+// Useful for suggesting corrections when a mention doesn't resolve.
+func (r *Resolver) FindSimilarUsers(name string) []string {
+	_ = r.loadUsers() // best-effort load
+
+	nameLower := strings.ToLower(name)
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	seen := make(map[string]bool)
+	var matches []string
+
+	for uname := range r.users {
+		lower := strings.ToLower(uname)
+		if seen[lower] {
+			continue
+		}
+
+		// Prefix match
+		if strings.HasPrefix(lower, nameLower) || strings.HasPrefix(nameLower, lower) {
+			seen[lower] = true
+			matches = append(matches, uname)
+			continue
+		}
+
+		// Simple edit distance: if names differ by at most 2 characters and
+		// are similar length, consider it a match.
+		if abs(len(lower)-len(nameLower)) <= 2 && levenshtein(lower, nameLower) <= 2 {
+			seen[lower] = true
+			matches = append(matches, uname)
+		}
+	}
+
+	sort.Strings(matches)
+	if len(matches) > 5 {
+		matches = matches[:5]
+	}
+	return matches
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+// levenshtein computes the edit distance between two strings.
+func levenshtein(a, b string) int {
+	la, lb := len(a), len(b)
+	if la == 0 {
+		return lb
+	}
+	if lb == 0 {
+		return la
+	}
+
+	prev := make([]int, lb+1)
+	curr := make([]int, lb+1)
+	for j := 0; j <= lb; j++ {
+		prev[j] = j
+	}
+
+	for i := 1; i <= la; i++ {
+		curr[0] = i
+		for j := 1; j <= lb; j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			del := prev[j] + 1
+			ins := curr[j-1] + 1
+			sub := prev[j-1] + cost
+			curr[j] = del
+			if ins < curr[j] {
+				curr[j] = ins
+			}
+			if sub < curr[j] {
+				curr[j] = sub
+			}
+		}
+		prev, curr = curr, prev
+	}
+	return prev[lb]
 }
