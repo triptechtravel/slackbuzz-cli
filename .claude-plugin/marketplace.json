@@ -1,0 +1,22 @@
+{
+  "name": "slackbuzz-cli",
+  "owner": {
+    "name": "Campermate"
+  },
+  "metadata": {
+    "description": "Claude Code skills for the slackbuzz-cli tool",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "slackbuzz-cli",
+      "description": "SlackBuzz CLI integration — send messages, DMs, search, reactions, and status from Claude Code",
+      "version": "1.0.0",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/slackbuzz-cli"],
+      "category": "productivity",
+      "tags": ["slack", "messaging", "cli", "communication"]
+    }
+  ]
+}

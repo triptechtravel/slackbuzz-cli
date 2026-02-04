@@ -140,6 +140,24 @@ slackbuzz later list --json
 slackbuzz threads --since 1d --json
 ```
 
+## Claude Code skill (plugin marketplace)
+
+Install the SlackBuzz CLI skill into Claude Code so it automatically uses the CLI for Slack operations. No need to clone this repo.
+
+```sh
+# In Claude Code, run:
+/plugin marketplace add triptechtravel/slackbuzz-cli
+/plugin install slackbuzz-cli@slackbuzz-cli
+```
+
+Once installed, Claude Code will automatically use `slackbuzz` commands when you ask it to send messages, check activity, search Slack, manage reactions, or set your status.
+
+If you have the repo cloned locally, you can alternatively symlink the skill:
+
+```sh
+make install-skill
+```
+
 ## Tips
 
 - Use `--json` output when you need the agent to parse data programmatically

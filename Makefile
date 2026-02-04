@@ -33,3 +33,13 @@ docs:
 .PHONY: snapshot
 snapshot:
 	goreleaser --snapshot --clean
+
+.PHONY: install-skill
+install-skill:
+	@mkdir -p $(HOME)/.claude/skills
+	@ln -sfn $(CURDIR)/skills/slackbuzz-cli $(HOME)/.claude/skills/slackbuzz-cli
+	@echo "Linked Claude Code skill: slackbuzz-cli → ~/.claude/skills/slackbuzz-cli"
+	@echo ""
+	@echo "Or install via plugin marketplace (no clone required):"
+	@echo "  /plugin marketplace add triptechtravel/slackbuzz-cli"
+	@echo "  /plugin install slackbuzz-cli@slackbuzz-cli"
