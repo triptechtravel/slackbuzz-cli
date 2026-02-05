@@ -75,9 +75,13 @@ func sendRun(opts *sendOptions) error {
 	ios := opts.factory.IOStreams
 	cs := ios.ColorScheme()
 
+	agentMode := opts.factory.IsAgentMode()
+
+	// In agent mode, prefer bot token (avoids user-token scope gaps);
+	// otherwise default to user token so messages post as the user.
 	var client *api.Client
 	var err error
-	if opts.asBot {
+	if opts.asBot || agentMode {
 		client, err = opts.factory.DefaultClient()
 	} else {
 		client, err = opts.factory.UserClient()
@@ -95,13 +99,32 @@ func sendRun(opts *sendOptions) error {
 	} else {
 		channelID, err = resolver.ResolveChannel(opts.channel)
 	}
+
+	// Bot-fallback: if resolution failed with missing_scope on the user token,
+	// retry with the bot client (which typically has channels:read).
+	if err != nil && api.IsMissingScopeError(err) && !opts.asBot && !agentMode {
+		botClient, botErr := opts.factory.BotClient()
+		if botErr == nil {
+			fmt.Fprintf(ios.ErrOut, "%s User token missing scope for channel lookup — falling back to bot token\n", cs.Yellow("!"))
+			botResolver := api.NewResolver(botClient.Slack)
+			if api.LooksLikeUser(opts.channel) {
+				channelID, err = botResolver.ResolveDM(opts.channel)
+			} else {
+				channelID, err = botResolver.ResolveChannel(opts.channel)
+			}
+		}
+	}
+
 	if err != nil {
-		return err
+		return fmt.Errorf("%s", api.FormatResolveError(err, opts.channel))
 	}
 
 	// Get message text from args or stdin
 	text := opts.text
 	if text == "" {
+		if agentMode {
+			return fmt.Errorf("message text is required (SLACKBUZZ_AGENT=1 disables interactive prompts)")
+		}
 		// Read from stdin
 		if !ios.IsTerminal() {
 			data, readErr := io.ReadAll(ios.In)

@@ -36,15 +36,18 @@ Messages always post as the authenticated user by default. Only use `--as-bot` i
 ### Send Messages
 
 ```bash
-# Send to a channel
-slackbuzz message send #general "Hello team!"
+# Send to a channel (shortcut — same as 'message send')
+slackbuzz send '#general' "Hello team!"
+
+# Send to a channel (full form)
+slackbuzz message send '#general' "Hello team!"
 
 # Send a DM (auto-opens DM channel)
-slackbuzz message send @alice "Hey, quick question"
-slackbuzz message send U02P3QC5H24 "Direct message by user ID"
+slackbuzz send @alice "Hey, quick question"
+slackbuzz send U02P3QC5H24 "Direct message by user ID"
 
 # Send as bot (default uses user token if available)
-slackbuzz message send #general "Bot message" --as-bot
+slackbuzz send '#general' "Bot message" --as-bot
 ```
 
 DM auto-detection: If the target looks like a user (`@name`, `U...` ID, or bare name), the CLI automatically opens a DM conversation via `conversations.open`.
@@ -255,7 +258,7 @@ Unrecognized names are left as-is (no error). Use `slackbuzz user list` to disco
 
 ## Shell Escaping
 
-The CLI automatically strips common shell escape artifacts from message text before sending. For example, zsh's history expansion can turn `!` into `\!` when passed through double-quoted strings. The CLI detects and cleans these so the message arrives correctly in Slack.
+The CLI automatically strips common shell escape artifacts from message text before sending. For example, zsh history expansion can turn exclamation marks into backslash-escaped versions when passed through double-quoted strings. The CLI detects and cleans these so the message arrives correctly in Slack.
 
 ## Key Behaviors
 
@@ -263,8 +266,33 @@ The CLI automatically strips common shell escape artifacts from message text bef
 - **DM auto-detection**: `@user`, `U...` IDs, and bare names auto-resolve to DM channels (for the channel/target argument)
 - **@mentions in message body**: Auto-resolved from `@name` to Slack's `<@USERID>` format before posting
 - **First-name shorthand**: `@herman` resolves to `herman.gorbatovskii` or `Herman Gorbatovskii` when unambiguous
-- **Shell unescape**: Common shell artifacts like `\!` are cleaned before sending
+- **Shell unescape**: Common shell artifacts (backslash-escaped punctuation) are cleaned before sending
 - **Case-insensitive resolution**: User lookup matches display names and usernames regardless of case
 - **Permission feedback**: Missing tokens or scopes produce clear error messages. Use `slackbuzz auth status` to check capabilities.
 - **Deeplinks**: Output includes clickable Slack deeplinks
 - **Cross-tool**: Digest combines Slack, ClickUp, and GitHub activity
+
+## Agent Mode
+
+When calling slackbuzz from an AI agent or automation, set `SLACKBUZZ_AGENT=1` to enable agent-friendly defaults:
+
+```bash
+SLACKBUZZ_AGENT=1 slackbuzz send '#stand-up' "Daily update from CI"
+```
+
+Agent mode changes:
+- **Bot token for sending**: Uses the bot token by default to avoid user-token scope gaps (e.g. missing `channels:read`). Messages will appear from the bot app. Omit `SLACKBUZZ_AGENT=1` to post as yourself.
+- **No interactive prompts**: Errors immediately if message text is missing instead of waiting for stdin
+- **Structured errors**: Outputs JSON error objects to stderr with `error`, `type`, and `suggestion` fields
+
+You can also run `slackbuzz doctor` to check that both tokens are valid and have the required scopes.
+
+## Diagnostics
+
+```bash
+# Check token health and scope coverage
+slackbuzz doctor
+
+# Check auth status
+slackbuzz auth status
+```

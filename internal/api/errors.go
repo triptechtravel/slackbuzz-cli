@@ -29,6 +29,20 @@ func IsAuthRelatedSlackError(slackErr string) bool {
 	return false
 }
 
+// IsMissingScopeError checks if an error is (or wraps) a Slack "missing_scope" error.
+func IsMissingScopeError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Walk the error chain
+	for e := err; e != nil; e = errors.Unwrap(e) {
+		if e.Error() == "missing_scope" {
+			return true
+		}
+	}
+	return strings.Contains(err.Error(), "missing_scope")
+}
+
 // SlackErrorMessage maps Slack API error codes to user-friendly messages.
 func SlackErrorMessage(slackErr string) string {
 	messages := map[string]string{
@@ -41,7 +55,7 @@ func SlackErrorMessage(slackErr string) string {
 		"invalid_auth":         "Authentication failed. Run 'slackbuzz auth login' to re-authenticate.",
 		"account_inactive":     "Account is inactive or token has been revoked.",
 		"token_revoked":        "Token has been revoked. Run 'slackbuzz auth login' to re-authenticate.",
-		"missing_scope":        "Token is missing required scopes. Check your Slack app configuration.",
+		"missing_scope":        "Token is missing required scopes. Run 'slackbuzz auth status' to check capabilities, or try --as-bot.",
 		"not_authed":           "Not authenticated. Run 'slackbuzz auth login' to authenticate.",
 		"user_not_found":       "User not found. Check the username or ID.",
 		"thread_not_found":     "Thread not found. Check the thread timestamp.",
@@ -52,6 +66,26 @@ func SlackErrorMessage(slackErr string) string {
 		return msg
 	}
 	return fmt.Sprintf("Slack API error: %s", slackErr)
+}
+
+// FormatResolveError produces an actionable error message when channel/user
+// resolution fails. It detects missing_scope errors and suggests fixes.
+func FormatResolveError(err error, target string) string {
+	if err == nil {
+		return ""
+	}
+
+	if IsMissingScopeError(err) {
+		return fmt.Sprintf(
+			"Channel resolution for %q failed: missing_scope (likely channels:read).\n"+
+				"  Fix: Re-install your Slack app with updated scopes, or run:\n"+
+				"    slackbuzz app create   (creates app with correct scopes)\n"+
+				"  Workaround: slackbuzz send --as-bot %s <text>",
+			target, target,
+		)
+	}
+
+	return fmt.Sprintf("failed to resolve %q: %s", target, err.Error())
 }
 
 // FormatError converts a Slack API error to a user-friendly message.

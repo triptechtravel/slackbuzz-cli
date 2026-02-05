@@ -1,6 +1,7 @@
 package cmdutil
 
 import (
+	"os"
 	"sync"
 
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
@@ -82,4 +83,11 @@ func (f *Factory) DefaultClient() (*api.Client, error) {
 		return client, nil
 	}
 	return f.UserClient()
+}
+
+// IsAgentMode returns true when SLACKBUZZ_AGENT=1 is set.
+// Agent mode prefers bot tokens, disables interactive prompts, and
+// outputs structured JSON errors to stderr.
+func (f *Factory) IsAgentMode() bool {
+	return os.Getenv("SLACKBUZZ_AGENT") == "1"
 }

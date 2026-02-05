@@ -8,6 +8,7 @@ import (
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/channel"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/completion"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/digest"
+	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/doctor"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/dm"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/file"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/later"
@@ -140,6 +141,13 @@ TIPS
 	statusCmd.GroupID = "workspace"
 	cmd.AddCommand(statusCmd)
 
+	// Top-level shortcut: slackbuzz send → slackbuzz message send
+	sendCmd := message.NewCmdSend(f)
+	sendCmd.Use = "send <channel|user> [text]"
+	sendCmd.Short = "Send a message (shortcut for 'message send')"
+	sendCmd.GroupID = "messaging"
+	cmd.AddCommand(sendCmd)
+
 	// Utility commands
 	versionCmd := version.NewCmdVersion()
 	versionCmd.GroupID = "tools"
@@ -148,6 +156,10 @@ TIPS
 	completionCmd := completion.NewCmdCompletion(cmd)
 	completionCmd.GroupID = "tools"
 	cmd.AddCommand(completionCmd)
+
+	doctorCmd := doctor.NewCmdDoctor(f)
+	doctorCmd.GroupID = "tools"
+	cmd.AddCommand(doctorCmd)
 
 	return cmd
 }
