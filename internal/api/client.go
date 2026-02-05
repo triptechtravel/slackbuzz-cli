@@ -37,3 +37,13 @@ func NewClient(token string) *Client {
 func (c *Client) Token() string {
 	return c.token
 }
+
+// AuthUserID calls auth.test to get the user ID for this client's token.
+// Returns empty string on failure.
+func (c *Client) AuthUserID() string {
+	resp, err := c.Slack.AuthTest()
+	if err != nil {
+		return ""
+	}
+	return resp.UserID
+}

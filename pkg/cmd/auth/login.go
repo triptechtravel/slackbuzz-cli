@@ -124,9 +124,13 @@ func loginRun(opts *loginOptions) error {
 		}
 	}
 
-	// Store team and user info
+	// Store team info and token-specific user info
 	_ = auth.StoreTeamInfo(info.TeamID, info.Team)
-	_ = auth.StoreUserInfo(info.UserID, info.User)
+	if tokenType == "bot" {
+		_ = auth.StoreBotUserInfo(info.UserID, info.User)
+	} else {
+		_ = auth.StoreUserInfo(info.UserID, info.User)
+	}
 
 	fmt.Fprintf(ios.Out, "%s Logged in as %s (%s token) — team: %s\n",
 		cs.Green("✓"),

@@ -8,13 +8,15 @@ import (
 )
 
 const (
-	serviceName  = "slack-cli"
-	botTokenKey  = "bot_token"
-	userTokenKey = "user_token"
-	teamIDKey    = "team_id"
-	teamNameKey  = "team_name"
-	userIDKey    = "user_id"
-	userNameKey  = "user_name"
+	serviceName    = "slack-cli"
+	botTokenKey    = "bot_token"
+	userTokenKey   = "user_token"
+	teamIDKey      = "team_id"
+	teamNameKey    = "team_name"
+	userIDKey      = "user_id"
+	userNameKey    = "user_name"
+	botUserIDKey   = "bot_user_id"
+	botUserNameKey = "bot_user_name"
 )
 
 // StoreBotToken saves a bot token (xoxb-) to the OS keyring, falling back to plaintext.
@@ -43,22 +45,19 @@ func StoreTeamInfo(teamID, teamName string) error {
 	return ac.Save()
 }
 
-// ResolveUserID returns the user's Slack ID, fetching it via auth.test if not
-// already stored (e.g. tokens saved before UserID tracking was added).
-// The result is cached to the keyring/file for future calls.
+// ResolveUserID returns the human user's Slack ID, fetching it via auth.test
+// on the user token if not already stored. Only uses the user token (not bot)
+// to ensure the returned ID is the human's, not the bot's.
 func ResolveUserID() (userID, userName string, err error) {
 	userID, userName = GetUserInfo()
 	if userID != "" {
 		return userID, userName, nil
 	}
 
-	// Try user token first, then bot token
+	// Only use user token — bot token would return the bot's identity
 	token, tokenErr := GetUserToken()
 	if tokenErr != nil || token == "" {
-		token, tokenErr = GetBotToken()
-		if tokenErr != nil || token == "" {
-			return "", "", fmt.Errorf("no tokens available to resolve user ID")
-		}
+		return "", "", fmt.Errorf("no user token available to resolve user ID (bot token returns bot identity, not yours)")
 	}
 
 	info, err := ValidateToken(token)
@@ -85,7 +84,7 @@ func GetUserToken() (string, error) {
 	})
 }
 
-// StoreUserInfo saves the authenticated user's Slack ID and username.
+// StoreUserInfo saves the human user's Slack ID and username (from user token auth.test).
 func StoreUserInfo(userID, userName string) error {
 	_ = keyring.Set(serviceName, userIDKey, userID)
 	_ = keyring.Set(serviceName, userNameKey, userName)
@@ -97,7 +96,19 @@ func StoreUserInfo(userID, userName string) error {
 	return ac.Save()
 }
 
-// GetUserInfo retrieves the stored user ID and username.
+// StoreBotUserInfo saves the bot's Slack user ID and username (from bot token auth.test).
+func StoreBotUserInfo(userID, userName string) error {
+	_ = keyring.Set(serviceName, botUserIDKey, userID)
+	_ = keyring.Set(serviceName, botUserNameKey, userName)
+
+	// Also persist to file as fallback
+	ac, _ := config.LoadAuth()
+	ac.BotUserID = userID
+	ac.BotUserName = userName
+	return ac.Save()
+}
+
+// GetUserInfo retrieves the stored human user ID and username.
 func GetUserInfo() (userID, userName string) {
 	userID, _ = keyring.Get(serviceName, userIDKey)
 	userName, _ = keyring.Get(serviceName, userNameKey)
@@ -110,6 +121,21 @@ func GetUserInfo() (userID, userName string) {
 		return "", ""
 	}
 	return ac.UserID, ac.UserName
+}
+
+// GetBotUserInfo retrieves the stored bot user ID and username.
+func GetBotUserInfo() (userID, userName string) {
+	userID, _ = keyring.Get(serviceName, botUserIDKey)
+	userName, _ = keyring.Get(serviceName, botUserNameKey)
+	if userID != "" {
+		return
+	}
+
+	ac, err := config.LoadAuth()
+	if err != nil {
+		return "", ""
+	}
+	return ac.BotUserID, ac.BotUserName
 }
 
 // GetTeamInfo retrieves the stored team ID and name.
@@ -135,6 +161,8 @@ func ClearTokens() error {
 	_ = keyring.Delete(serviceName, teamNameKey)
 	_ = keyring.Delete(serviceName, userIDKey)
 	_ = keyring.Delete(serviceName, userNameKey)
+	_ = keyring.Delete(serviceName, botUserIDKey)
+	_ = keyring.Delete(serviceName, botUserNameKey)
 
 	ac := &config.AuthConfig{}
 	_ = ac.Clear()

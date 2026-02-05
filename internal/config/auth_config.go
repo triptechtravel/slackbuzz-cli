@@ -14,8 +14,10 @@ type AuthConfig struct {
 	ConfigToken string `yaml:"config_token,omitempty"` // App configuration token for manifest API
 	TeamID      string `yaml:"team_id,omitempty"`
 	TeamName    string `yaml:"team_name,omitempty"`
-	UserID      string `yaml:"user_id,omitempty"`
-	UserName    string `yaml:"user_name,omitempty"`
+	UserID      string `yaml:"user_id,omitempty"`      // Human user ID (from user token)
+	UserName    string `yaml:"user_name,omitempty"`    // Human username (from user token)
+	BotUserID   string `yaml:"bot_user_id,omitempty"`  // Bot user ID (from bot token)
+	BotUserName string `yaml:"bot_user_name,omitempty"` // Bot username (from bot token)
 }
 
 // AuthFile returns the path to the auth config file.
@@ -64,5 +66,7 @@ func (a *AuthConfig) Clear() error {
 	a.TeamName = ""
 	a.UserID = ""
 	a.UserName = ""
+	a.BotUserID = ""
+	a.BotUserName = ""
 	return os.Remove(AuthFile())
 }

@@ -270,7 +270,7 @@ func storeDetectedToken(ios *iostreams.IOStreams, cs *iostreams.ColorScheme, tok
 			fmt.Fprintf(ios.ErrOut, "Warning: failed to store bot token: %v\n", storeErr)
 		} else {
 			_ = auth.StoreTeamInfo(info.TeamID, info.Team)
-			_ = auth.StoreUserInfo(info.UserID, info.User)
+			_ = auth.StoreBotUserInfo(info.UserID, info.User)
 			fmt.Fprintf(ios.Out, "%s Bot token saved (%s on %s)\n\n", cs.Green("✓"), cs.Bold(info.User), cs.Bold(info.Team))
 			storedBot = true
 		}

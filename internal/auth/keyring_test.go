@@ -190,6 +190,49 @@ func TestStoreAndGetUserInfo(t *testing.T) {
 	}
 }
 
+func TestStoreAndGetBotUserInfo(t *testing.T) {
+	keyring.MockInit()
+	setConfigDir(t)
+
+	if err := StoreBotUserInfo("U_BOT_123", "mybot"); err != nil {
+		t.Fatalf("StoreBotUserInfo() error: %v", err)
+	}
+
+	botUserID, botUserName := GetBotUserInfo()
+	if botUserID != "U_BOT_123" {
+		t.Errorf("GetBotUserInfo() userID = %q, want %q", botUserID, "U_BOT_123")
+	}
+	if botUserName != "mybot" {
+		t.Errorf("GetBotUserInfo() userName = %q, want %q", botUserName, "mybot")
+	}
+}
+
+func TestBotAndUserInfoSeparate(t *testing.T) {
+	keyring.MockInit()
+	setConfigDir(t)
+
+	// Store bot info
+	if err := StoreBotUserInfo("U_BOT", "bot-name"); err != nil {
+		t.Fatalf("StoreBotUserInfo() error: %v", err)
+	}
+
+	// Store user info — should NOT overwrite bot info
+	if err := StoreUserInfo("U_HUMAN", "human-name"); err != nil {
+		t.Fatalf("StoreUserInfo() error: %v", err)
+	}
+
+	// Verify both are stored independently
+	botID, botName := GetBotUserInfo()
+	userID, userName := GetUserInfo()
+
+	if botID != "U_BOT" || botName != "bot-name" {
+		t.Errorf("GetBotUserInfo() = (%q, %q), want (%q, %q)", botID, botName, "U_BOT", "bot-name")
+	}
+	if userID != "U_HUMAN" || userName != "human-name" {
+		t.Errorf("GetUserInfo() = (%q, %q), want (%q, %q)", userID, userName, "U_HUMAN", "human-name")
+	}
+}
+
 func TestClearTokensFileFallback(t *testing.T) {
 	keyring.MockInitWithError(fmt.Errorf("keyring unavailable"))
 	setConfigDir(t)
