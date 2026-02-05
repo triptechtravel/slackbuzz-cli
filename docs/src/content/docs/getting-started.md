@@ -59,10 +59,18 @@ slackbuzz activity --all         # Everything combined
 
 The activity view auto-detects ClickUp task IDs and GitHub PR URLs in messages and shows actionable hints.
 
-## Step 3: Send a message
+## Step 3: Verify setup
+
+Run the doctor to check that your tokens are valid and have the required scopes:
 
 ```sh
-slackbuzz message send #general "Hello from the terminal!"
+slackbuzz doctor
+```
+
+## Step 4: Send a message
+
+```sh
+slackbuzz send '#general' "Hello from the terminal!"
 ```
 
 Reply to a thread:
@@ -84,7 +92,7 @@ slackbuzz message edit #general 1706000000.000000 "corrected text"
 slackbuzz message delete #general 1706000000.000000 --confirm
 ```
 
-## Step 4: Set your status
+## Step 5: Set your status
 
 ```sh
 slackbuzz status set "Coding" :computer: --until 2h
@@ -102,7 +110,7 @@ Clear it:
 slackbuzz status clear
 ```
 
-## Step 5: Get a cross-tool briefing
+## Step 6: Get a cross-tool briefing
 
 If you have the ClickUp CLI and GitHub CLI installed, get a combined view of everything across tools:
 

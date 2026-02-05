@@ -72,7 +72,7 @@ slackbuzz activity
 Send a message:
 
 ```sh
-slackbuzz message send #general "Hello from the terminal!"
+slackbuzz send '#general' "Hello from the terminal!"
 ```
 
 Get a cross-tool morning briefing:
@@ -102,6 +102,7 @@ slackbuzz digest
 
 | Command | Description |
 |---------|-------------|
+| `slackbuzz send <channel\|user> "text"` | Send a message (shortcut) |
 | `slackbuzz message list <channel>` | Read channel or thread history |
 | `slackbuzz message send <channel> "text"` | Send a message |
 | `slackbuzz message edit <channel> <ts> "text"` | Edit a message |
@@ -140,10 +141,11 @@ slackbuzz digest
 | `slackbuzz auth logout` | Remove stored credentials |
 | `slackbuzz auth status` | Show current authentication state |
 
-### Utility
+### Diagnostics & utility
 
 | Command | Description |
 |---------|-------------|
+| `slackbuzz doctor` | Check token health and required scopes |
 | `slackbuzz version` | Print version, commit, and build date |
 | `slackbuzz completion SHELL` | Generate shell completion scripts |
 
@@ -156,15 +158,15 @@ SlackBuzz uses two types of Slack tokens. **The CLI automatically selects the co
 | **Bot token** | `xoxb-` | Reading channels/users, reactions, system notifications (`notify`) |
 | **User token** | `xoxp-` | Sending messages (as you), search, DMs, saved items, status |
 
-Messages post as the authenticated user by default. Pass `--as-bot` on `message send`, `edit`, or `delete` to post as the bot app instead.
+Messages post as the authenticated user by default. Pass `--as-bot` on `message send`, `edit`, or `delete` to post as the bot app instead. When sending a DM to yourself, the CLI automatically switches to the bot so you receive a notification.
 
 The `slackbuzz app create` command creates a Slack app pre-configured with all required scopes for both token types. After installing the app to your workspace, paste both tokens when prompted.
 
 ### Required scopes
 
-**Bot token (`xoxb-`):** `chat:write`, `channels:history`, `channels:read`, `emoji:read`, `groups:history`, `groups:read`, `im:history`, `im:read`, `mpim:history`, `mpim:read`, `reactions:read`, `reactions:write`, `users:read`
+**Bot token (`xoxb-`):** `chat:write`, `channels:history`, `channels:read`, `emoji:read`, `groups:history`, `groups:read`, `im:history`, `im:read`, `im:write`, `mpim:history`, `mpim:read`, `reactions:read`, `reactions:write`, `users:read`
 
-**User token (`xoxp-`):** `chat:write`, `im:write`, `search:read`, `stars:read`, `stars:write`, `users.profile:read`, `users.profile:write`
+**User token (`xoxp-`):** `channels:read`, `chat:write`, `groups:read`, `im:read`, `im:write`, `mpim:read`, `search:read`, `stars:read`, `stars:write`, `users:read`, `users.profile:read`, `users.profile:write`
 
 ## Cross-tool integration
 

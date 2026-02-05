@@ -310,6 +310,32 @@ func TestFindSimilarUsers(t *testing.T) {
 	}
 }
 
+func TestLooksLikeUser(t *testing.T) {
+	tests := []struct {
+		target string
+		want   bool
+	}{
+		{"@alice", true},
+		{"@isaac", true},
+		{"U018Y0Y9HSN", true},
+		{"W12345", true},
+		{"alice", true},   // bare name → assumed user
+		{"herman", true},  // bare name → assumed user
+		{"#general", false},
+		{"#dev-logs", false},
+		{"C012345", false}, // channel ID
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.target, func(t *testing.T) {
+			got := LooksLikeUser(tt.target)
+			if got != tt.want {
+				t.Errorf("LooksLikeUser(%q) = %v, want %v", tt.target, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestLevenshtein(t *testing.T) {
 	tests := []struct {
 		a, b string

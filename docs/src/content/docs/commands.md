@@ -206,6 +206,40 @@ Requires the [ClickUp CLI](https://github.com/triptechtravel/clickup-cli) and [G
 
 ---
 
+## send
+
+### `send <channel|user> <text>`
+
+Top-level shortcut for `message send`. Send a message to a channel or DM.
+
+```sh
+# Send to a channel
+slackbuzz send '#general' "Hello from the terminal!"
+
+# Send a DM
+slackbuzz send @alice "Quick question"
+
+# Same as: slackbuzz message send '#general' "Hello!"
+```
+
+See [`message send`](#message-send-channeluser-text) for all flags and details.
+
+---
+
+## doctor
+
+### `doctor`
+
+Check token health and required scopes. Validates both bot and user tokens, then probes key API scopes to detect permission gaps.
+
+```sh
+slackbuzz doctor
+```
+
+Reports a pass/fail table with remediation instructions. Exits with code 1 if any check fails.
+
+---
+
 ## message
 
 Read, send, and search Slack messages.
@@ -252,6 +286,8 @@ Send a message to a channel or DM. The first argument accepts a `#channel-name`,
 `@name` mentions in the message body are **resolved automatically** to Slack's `<@USERID>` format before posting. Usernames and display names are matched case-insensitively. Unrecognized names are left as-is. Resolved mentions are confirmed on stderr.
 
 **DM sending requires `im:write` and `chat:write` user token scopes.** Apps created with `slackbuzz app create` include these scopes by default. For existing apps, add the scopes at api.slack.com/apps > OAuth & Permissions.
+
+**Self-DM:** When sending a DM to yourself, the CLI automatically switches to the bot token so you receive a notification. The bot opens its own DM channel with you, and the message appears from the bot app.
 
 ```sh
 # Send to a channel

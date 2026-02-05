@@ -172,6 +172,27 @@ slackbuzz notify #releases --message '@team v2.0 is live'
 
 Unrecognized names pass through as-is. Use `slackbuzz user list --json` to discover available usernames.
 
+## Agent mode
+
+When calling slackbuzz from an AI agent or automation, set `SLACKBUZZ_AGENT=1` for agent-friendly defaults:
+
+```sh
+SLACKBUZZ_AGENT=1 slackbuzz send '#stand-up' "Daily update from CI"
+```
+
+Agent mode changes:
+- **Bot token for sending**: Uses the bot token by default to avoid user-token scope gaps. Messages will appear from the bot app. Omit `SLACKBUZZ_AGENT=1` to post as yourself.
+- **No interactive prompts**: Errors immediately if message text is missing instead of waiting for stdin.
+- **Structured errors**: Outputs JSON error objects to stderr with `error`, `type`, and `suggestion` fields.
+
+## Diagnostics
+
+Run `slackbuzz doctor` to verify both tokens are valid and have the required scopes before using the CLI in automated workflows:
+
+```sh
+slackbuzz doctor
+```
+
 ## Tips
 
 - Use `--json` output when you need the agent to parse data programmatically

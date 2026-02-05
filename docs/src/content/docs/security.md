@@ -26,13 +26,13 @@ SlackBuzz uses two types of Slack tokens. The CLI automatically selects the corr
 | **Bot token** | `xoxb-` | Reading channels/users, reactions, system notifications |
 | **User token** | `xoxp-` | Sending messages (as you), search, DMs, saved items, status |
 
-Both tokens are stored separately in the keyring. The `slackbuzz app create` command creates a Slack app pre-configured with all required scopes for both token types.
+Both tokens and their associated identities (user ID, username) are stored separately in the keyring — bot identity and human identity are kept in distinct keys to prevent one from overwriting the other. The `slackbuzz app create` command creates a Slack app pre-configured with all required scopes for both token types.
 
 ### Required scopes
 
-**Bot (`xoxb-`):** `chat:write`, `channels:history`, `channels:read`, `emoji:read`, `groups:history`, `groups:read`, `im:history`, `im:read`, `mpim:history`, `mpim:read`, `reactions:read`, `reactions:write`, `users:read`
+**Bot (`xoxb-`):** `chat:write`, `channels:history`, `channels:read`, `emoji:read`, `groups:history`, `groups:read`, `im:history`, `im:read`, `im:write`, `mpim:history`, `mpim:read`, `reactions:read`, `reactions:write`, `users:read`
 
-**User (`xoxp-`):** `chat:write`, `im:write`, `search:read`, `stars:read`, `stars:write`, `users.profile:read`, `users.profile:write`
+**User (`xoxp-`):** `channels:read`, `chat:write`, `groups:read`, `im:read`, `im:write`, `mpim:read`, `search:read`, `stars:read`, `stars:write`, `users:read`, `users.profile:read`, `users.profile:write`
 
 ## Best practices
 

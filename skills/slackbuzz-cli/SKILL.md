@@ -263,6 +263,7 @@ The CLI automatically strips common shell escape artifacts from message text bef
 ## Key Behaviors
 
 - **Automatic token selection**: The CLI picks the right token (bot or user) for each command. No need to specify — just run the command. Use `--as-bot` only when explicitly asked to post as the bot.
+- **Self-DM via bot**: When sending a DM to yourself, the CLI automatically switches to the bot token so you receive a notification. The bot opens its own DM channel with you.
 - **DM auto-detection**: `@user`, `U...` IDs, and bare names auto-resolve to DM channels (for the channel/target argument)
 - **@mentions in message body**: Auto-resolved from `@name` to Slack's `<@USERID>` format before posting
 - **First-name shorthand**: `@herman` resolves to `herman.gorbatovskii` or `Herman Gorbatovskii` when unambiguous
