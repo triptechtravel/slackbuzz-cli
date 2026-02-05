@@ -120,14 +120,19 @@ func sendRun(opts *sendOptions) error {
 		return fmt.Errorf("%s", api.FormatResolveError(err, opts.channel))
 	}
 
-	// Self-DM: if sending a DM to yourself, switch to bot so you get a notification
+	// Self-DM: if sending a DM to yourself, switch to bot so you get a notification.
+	// The bot must re-open its own DM channel since the user's channel ID won't work.
 	if api.LooksLikeUser(opts.channel) && !opts.asBot {
 		if selfID, _, _ := auth.ResolveUserID(); selfID != "" {
 			targetID := resolveTargetUserID(resolver, opts.channel)
 			if targetID == selfID {
 				if botClient, botErr := opts.factory.BotClient(); botErr == nil {
-					client = botClient
-					fmt.Fprintf(ios.ErrOut, "%s Sending to yourself — using bot so you get a notification\n", cs.Blue("→"))
+					botResolver := api.NewResolver(botClient.Slack)
+					if botChannelID, botErr := botResolver.ResolveDM(opts.channel); botErr == nil {
+						client = botClient
+						channelID = botChannelID
+						fmt.Fprintf(ios.ErrOut, "%s Sending to yourself — using bot so you get a notification\n", cs.Blue("→"))
+					}
 				}
 			}
 		}
