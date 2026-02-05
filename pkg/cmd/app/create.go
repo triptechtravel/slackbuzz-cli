@@ -78,6 +78,7 @@ var appManifest = map[string]interface{}{
 				"groups:read",
 				"im:history",
 				"im:read",
+				"im:write",
 				"mpim:history",
 				"mpim:read",
 				"reactions:read",
