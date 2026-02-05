@@ -7,6 +7,27 @@ description: Complete reference for all slackbuzz CLI commands and flags.
 
 All commands are invoked as subcommands of `slackbuzz`. Run `slackbuzz --help` for a summary, or `slackbuzz <command> --help` for details on any command.
 
+## Token selection
+
+The CLI automatically picks the correct token (bot or user) for each command. You don't need to think about it — just run the command.
+
+| Command | Token | Why |
+|---------|-------|-----|
+| `message send`, `edit`, `delete` | **User** | Posts as the authenticated user |
+| `message list` | **Bot** | Reads channel history |
+| `channel list`, `channel info` | **Bot** | Reads channel metadata |
+| `user list`, `user info` | **Bot** | Reads user profiles |
+| `react`, `react remove` | **Bot** | Reactions |
+| `notify` | **Bot** | System/automated notifications |
+| `thread link` | **Bot** | Generates permalinks |
+| `activity`, `threads`, `digest` | **User** | Search API (user-only) |
+| `dm list` | **User** | Search API (user-only) |
+| `message search`, `file search` | **User** | Search API (user-only) |
+| `later list`, `add`, `remove` | **User** | Stars API (user-only) |
+| `status`, `status set`, `clear` | **User** | Profile API (user-only) |
+
+**Override:** Pass `--as-bot` on `message send`, `edit`, or `delete` to post as the bot app instead of the user.
+
 ---
 
 ## activity

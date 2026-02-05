@@ -24,9 +24,12 @@ slackbuzz auth login     # Log in with bot and/or user token
 slackbuzz auth status    # Check auth status and capabilities
 ```
 
-Two token types:
-- **Bot token** (`xoxb-`): Channels, reactions, user lists, posting messages
-- **User token** (`xoxp-`): Search, DMs, stars, status, profile
+Two token types are required. **The CLI automatically selects the right token for each command — you do not need to specify which to use.**
+
+- **Bot token** (`xoxb-`): Used automatically for reading channels, listing users, reactions, and system notifications
+- **User token** (`xoxp-`): Used automatically for sending messages (as the user), search, DMs, saved items, status, and profile
+
+Messages always post as the authenticated user by default. Only use `--as-bot` if you specifically want a message to come from the bot app rather than the user.
 
 ## Messaging
 
@@ -189,6 +192,29 @@ slackbuzz user list
 slackbuzz user info @alice
 ```
 
+## Token Defaults
+
+The CLI automatically selects the correct token for each command. You do not need to think about bot vs user mode — just run the command.
+
+| Command | Token | Rationale |
+|---------|-------|-----------|
+| `message send`, `edit`, `delete` | **User** | Posts as the authenticated user |
+| `message list` | **Bot** | Reads channel history |
+| `channel list`, `channel info` | **Bot** | Reads channel metadata |
+| `user list`, `user info` | **Bot** | Reads user profiles |
+| `react`, `react remove` | **Bot** | Reactions via bot |
+| `notify` | **Bot** | System/automated notifications |
+| `thread link` | **Bot** | Generates permalinks |
+| `activity`, `threads`, `digest` | **User** | Slack search API (user-only) |
+| `dm list` | **User** | Slack search API (user-only) |
+| `message search`, `file search` | **User** | Slack search API (user-only) |
+| `later list`, `add`, `remove` | **User** | Stars API (user-only) |
+| `status`, `status set`, `clear` | **User** | Profile API (user-only) |
+
+**Override:** Pass `--as-bot` on `message send`, `edit`, or `delete` to post as the bot app instead of the user. Only do this when explicitly requested.
+
+**Missing permissions:** If a command fails due to a missing token or scope, the error message will indicate what's needed. Run `slackbuzz auth status` to check available capabilities.
+
 ## Common Flags
 
 | Flag | Description |
@@ -196,7 +222,7 @@ slackbuzz user info @alice
 | `--json` | Output as JSON |
 | `--jq <expr>` | Filter JSON with jq expression |
 | `--template <tmpl>` | Format with Go template |
-| `--as-bot` | Use bot token instead of user token (message send) |
+| `--as-bot` | Post as the bot app instead of the user (send/edit/delete only) |
 | `--since <duration>` | Time filter (2h, 1d, 7d, 2w, or YYYY-MM-DD) |
 | `--limit <n>` | Max results |
 
@@ -233,11 +259,12 @@ The CLI automatically strips common shell escape artifacts from message text bef
 
 ## Key Behaviors
 
+- **Automatic token selection**: The CLI picks the right token (bot or user) for each command. No need to specify — just run the command. Use `--as-bot` only when explicitly asked to post as the bot.
 - **DM auto-detection**: `@user`, `U...` IDs, and bare names auto-resolve to DM channels (for the channel/target argument)
 - **@mentions in message body**: Auto-resolved from `@name` to Slack's `<@USERID>` format before posting
 - **First-name shorthand**: `@herman` resolves to `herman.gorbatovskii` or `Herman Gorbatovskii` when unambiguous
 - **Shell unescape**: Common shell artifacts like `\!` are cleaned before sending
 - **Case-insensitive resolution**: User lookup matches display names and usernames regardless of case
-- **Dual tokens**: Bot token for channel ops, user token for search/DMs/status
+- **Permission feedback**: Missing tokens or scopes produce clear error messages. Use `slackbuzz auth status` to check capabilities.
 - **Deeplinks**: Output includes clickable Slack deeplinks
 - **Cross-tool**: Digest combines Slack, ClickUp, and GitHub activity

@@ -98,16 +98,16 @@ func statusRun(f *cmdutil.Factory) error {
 	userValid := userErr == nil && userToken != ""
 
 	if botValid {
-		fmt.Fprintf(ios.Out, "    Bot:  read channels, post messages, reactions, list users\n")
+		fmt.Fprintf(ios.Out, "    Bot:  read channels, list users, reactions, system notifications\n")
 	}
 	if userValid {
-		fmt.Fprintf(ios.Out, "    User: search, DMs, stars, profile, send messages\n")
+		fmt.Fprintf(ios.Out, "    User: send messages (default), search, DMs, stars, profile\n")
 	}
 	if !userValid {
-		fmt.Fprintf(ios.Out, "    %s User token not set — search, DMs, and stars unavailable\n", cs.Yellow("!"))
+		fmt.Fprintf(ios.Out, "    %s User token not set — sending, search, DMs, and stars unavailable\n", cs.Yellow("!"))
 		fmt.Fprintf(ios.Out, "    %s Add with: slackbuzz auth login\n", cs.Gray(" "))
 	} else {
-		fmt.Fprintf(ios.Out, "    %s DM sending requires im:write and chat:write user scopes\n", cs.Gray("Hint:"))
+		fmt.Fprintf(ios.Out, "    %s Messages post as you by default. Use --as-bot to post as the app.\n", cs.Gray("Hint:"))
 	}
 
 	return nil

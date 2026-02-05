@@ -19,14 +19,20 @@ Tokens are never logged to stdout or stored in the config file.
 
 ## Token types
 
-SlackBuzz uses two types of Slack tokens:
+SlackBuzz uses two types of Slack tokens. The CLI automatically selects the correct token for each command.
 
-| Token | Prefix | Used for |
-|-------|--------|----------|
-| **Bot token** | `xoxb-` | Sending messages, reading channels, reactions, emoji list |
-| **User token** | `xoxp-` | Search, activity inbox, saved items, status management |
+| Token | Prefix | Automatic usage |
+|-------|--------|-----------------|
+| **Bot token** | `xoxb-` | Reading channels/users, reactions, system notifications |
+| **User token** | `xoxp-` | Sending messages (as you), search, DMs, saved items, status |
 
 Both tokens are stored separately in the keyring. The `slackbuzz app create` command creates a Slack app pre-configured with all required scopes for both token types.
+
+### Required scopes
+
+**Bot (`xoxb-`):** `chat:write`, `channels:history`, `channels:read`, `emoji:read`, `groups:history`, `groups:read`, `im:history`, `im:read`, `mpim:history`, `mpim:read`, `reactions:read`, `reactions:write`, `users:read`
+
+**User (`xoxp-`):** `chat:write`, `im:write`, `search:read`, `stars:read`, `stars:write`, `users.profile:read`, `users.profile:write`
 
 ## Best practices
 
