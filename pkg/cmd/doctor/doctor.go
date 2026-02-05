@@ -102,23 +102,23 @@ func doctorRun(f *cmdutil.Factory) error {
 			detail: "configured",
 		})
 
-		// Probe channels:read with user token
+		// Probe conversation scopes with user token (matches resolver's query)
 		userClient := slack.New(userToken)
 		_, _, err := userClient.GetConversations(&slack.GetConversationsParameters{
-			Types: []string{"public_channel"},
+			Types: []string{"public_channel", "private_channel", "im", "mpim"},
 			Limit: 1,
 		})
 		if err != nil {
 			results = append(results, checkResult{
-				name:   "User channels:read",
+				name:   "User conversation scopes",
 				passed: false,
 				detail: err.Error(),
-				fix:    "Add channels:read to user scopes, or re-run: slackbuzz app create",
+				fix:    "Add channels:read, groups:read, im:read, mpim:read to user scopes, or re-run: slackbuzz app create",
 			})
 			anyFailed = true
 		} else {
 			results = append(results, checkResult{
-				name:   "User channels:read",
+				name:   "User conversation scopes",
 				passed: true,
 				detail: "OK",
 			})

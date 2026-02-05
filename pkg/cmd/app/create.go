@@ -87,7 +87,10 @@ var appManifest = map[string]interface{}{
 			"user": []string{
 				"channels:read",
 				"chat:write",
+				"groups:read",
+				"im:read",
 				"im:write",
+				"mpim:read",
 				"search:read",
 				"stars:read",
 				"stars:write",
