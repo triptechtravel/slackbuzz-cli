@@ -9,6 +9,7 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
+	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -119,6 +120,19 @@ func sendRun(opts *sendOptions) error {
 		return fmt.Errorf("%s", api.FormatResolveError(err, opts.channel))
 	}
 
+	// Self-DM: if sending a DM to yourself, switch to bot so you get a notification
+	if api.LooksLikeUser(opts.channel) && !opts.asBot {
+		if selfID, _, _ := auth.ResolveUserID(); selfID != "" {
+			targetID := resolveTargetUserID(resolver, opts.channel)
+			if targetID == selfID {
+				if botClient, botErr := opts.factory.BotClient(); botErr == nil {
+					client = botClient
+					fmt.Fprintf(ios.ErrOut, "%s Sending to yourself — using bot so you get a notification\n", cs.Blue("→"))
+				}
+			}
+		}
+	}
+
 	// Get message text from args or stdin
 	text := opts.text
 	if text == "" {
@@ -185,6 +199,16 @@ func sendRun(opts *sendOptions) error {
 	fmt.Fprintf(ios.Out, "%s Message sent to %s (ts: %s)\n",
 		cs.Green("✓"), cs.Bold(opts.channel), respTS)
 	return nil
+}
+
+// resolveTargetUserID resolves a DM target to a user ID without opening a conversation.
+// Returns empty string if resolution fails.
+func resolveTargetUserID(r *api.Resolver, target string) string {
+	id, err := r.ResolveUser(target)
+	if err != nil {
+		return ""
+	}
+	return id
 }
 
 // unescapeShellArtifacts removes common shell escape sequences that leak into
