@@ -94,6 +94,7 @@ var appManifest = map[string]interface{}{
 				"search:read",
 				"stars:read",
 				"stars:write",
+				"users:read",
 				"users.profile:read",
 				"users.profile:write",
 			},
