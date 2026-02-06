@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -26,10 +27,13 @@ func (t *rateLimitTransport) RoundTrip(req *http.Request) (*http.Response, error
 
 	t.rl.Update(resp)
 
-	// Detect 401 and return AuthExpiredError
+	// Detect 401 — read the body before closing so we preserve the actual
+	// error message. Slack can return 401 for permission issues, not just
+	// expired tokens.
 	if resp.StatusCode == 401 {
+		body, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return nil, &AuthExpiredError{}
+		return nil, &AuthExpiredError{Detail: string(body)}
 	}
 
 	// Retry once on 429
