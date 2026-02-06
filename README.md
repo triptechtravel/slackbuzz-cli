@@ -81,6 +81,16 @@ Get a cross-tool morning briefing:
 slackbuzz digest
 ```
 
+## Team setup
+
+Get a teammate from zero to fully operational with one command:
+
+```sh
+curl -sL https://raw.githubusercontent.com/triptechtravel/slackbuzz-cli/main/scripts/setup.sh | bash
+```
+
+The script installs slackbuzz, sets up the Claude Code skill, and walks through authentication interactively. See the [team setup guide](https://triptechtravel.github.io/slackbuzz-cli/team-setup/) for details.
+
 ## Command reference
 
 ### Inbox & activity
@@ -269,6 +279,17 @@ slackbuzz digest --json
 ```
 
 The `--json` flag on all commands outputs structured data that agents can parse. The activity view includes channel IDs, timestamps, and permalinks that agents can use to take action.
+
+## Releasing
+
+Releases are handled automatically by GitHub Actions using [goreleaser](https://goreleaser.com/). To create a new release:
+
+```sh
+git tag v0.x.y
+git push origin main --tags
+```
+
+The workflow builds binaries for all platforms, creates a GitHub release, and updates the Homebrew tap. **Do not run `goreleaser` locally** — it will conflict with the CI release.
 
 ## Author
 
