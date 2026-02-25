@@ -9,11 +9,12 @@ import (
 func NewCmdFile(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "file <command>",
-		Short: "Search and manage files",
-		Long:  "Search files shared in Slack.",
+		Short: "Search, upload, and manage files",
+		Long:  "Search files shared in Slack, or upload files to channels and DMs.",
 	}
 
 	cmd.AddCommand(NewCmdSearch(f))
+	cmd.AddCommand(NewCmdUpload(f))
 
 	return cmd
 }

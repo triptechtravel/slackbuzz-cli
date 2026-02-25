@@ -74,6 +74,8 @@ var appManifest = map[string]interface{}{
 				"channels:history",
 				"channels:read",
 				"emoji:read",
+				"files:read",
+				"files:write",
 				"groups:history",
 				"groups:read",
 				"im:history",
@@ -88,6 +90,8 @@ var appManifest = map[string]interface{}{
 			"user": []string{
 				"channels:read",
 				"chat:write",
+				"files:read",
+				"files:write",
 				"groups:read",
 				"im:read",
 				"im:write",
