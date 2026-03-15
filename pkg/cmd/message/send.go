@@ -9,6 +9,7 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
+	slacktext "github.com/triptechtravel/slackbuzz-cli/internal/text"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -18,6 +19,8 @@ type sendOptions struct {
 	text     string
 	threadTS string
 	asBot    bool
+	blocks   bool
+	raw      bool
 	json     cmdutil.JSONFlags
 }
 
@@ -32,18 +35,29 @@ func NewCmdSend(f *cmdutil.Factory) *cobra.Command {
 
 The first argument accepts a #channel-name, channel ID, @username, or user ID.
 To send a DM, use a username, @username, or user ID as the channel argument.
-If text is omitted, reads from stdin (for piping).`,
+If text is omitted, reads from stdin (for piping).
+
+Formatting: Standard Markdown (**bold**, # headers, [links](url)) is
+automatically converted to Slack mrkdwn (*bold*, etc). Use --raw to
+disable auto-conversion and send text as-is.
+
+Use --blocks to send via Block Kit for richer formatting (sections with
+mrkdwn rendering). Long messages are automatically split into multiple
+blocks (Slack's 3000-char limit per block).`,
 		Example: `  # Send a message to a channel
   slackbuzz message send #general "Hello, world!"
 
   # Send a DM by @username
   slackbuzz message send @sarah "Quick question about the API"
 
-  # Send a DM by username (no @ needed)
-  slackbuzz message send herman "Hey, got a minute?"
+  # Send with Slack mrkdwn formatting (auto-converted from Markdown)
+  slackbuzz message send #releases "## 🚀 v5.4.0\n- **New feature**: offline images"
 
-  # Send a DM by user ID
-  slackbuzz message send U02P3QC5H24 "Direct message by ID"
+  # Send via Block Kit for richer rendering
+  slackbuzz message send #releases --blocks "## Release Notes\n- *Feature*: offline images"
+
+  # Send raw text without Markdown→mrkdwn conversion
+  slackbuzz message send #dev --raw "**this stays as double asterisks**"
 
   # Send to a thread
   slackbuzz message send #general "Reply here" --thread-ts 1234567890.123456
@@ -66,6 +80,8 @@ If text is omitted, reads from stdin (for piping).`,
 
 	cmd.Flags().StringVar(&opts.threadTS, "thread-ts", "", "Thread timestamp to reply to")
 	cmd.Flags().BoolVar(&opts.asBot, "as-bot", false, "Send as the bot instead of your user account")
+	cmd.Flags().BoolVar(&opts.blocks, "blocks", false, "Send via Block Kit sections (richer mrkdwn rendering)")
+	cmd.Flags().BoolVar(&opts.raw, "raw", false, "Disable Markdown→mrkdwn auto-conversion")
 	cmdutil.AddJSONFlags(cmd, &opts.json)
 
 	return cmd
@@ -166,6 +182,18 @@ func sendRun(opts *sendOptions) error {
 	// Strip common shell escape artifacts (e.g. zsh history expansion turns ! into \!)
 	text = unescapeShellArtifacts(text)
 
+	// Auto-convert Markdown → Slack mrkdwn (unless --raw)
+	if !opts.raw {
+		// Show formatting hints on stderr before converting
+		if hints := slacktext.DetectFormatHints(text); len(hints) > 0 {
+			fmt.Fprintf(ios.ErrOut, "%s Auto-converting Markdown → Slack mrkdwn\n", cs.Blue("→"))
+			for _, h := range hints {
+				fmt.Fprintf(ios.ErrOut, "  %s %s (%s)\n", cs.Yellow("⚡"), h.Issue, h.Example)
+			}
+		}
+		text = slacktext.ConvertMarkdownToMrkdwn(text)
+	}
+
 	// Resolve @mentions in message body
 	if strings.Contains(text, "@") {
 		resolved, names, err := resolver.ResolveMentions(text)
@@ -178,8 +206,15 @@ func sendRun(opts *sendOptions) error {
 	}
 
 	// Build message options
-	msgOpts := []slack.MsgOption{
-		slack.MsgOptionText(text, false),
+	var msgOpts []slack.MsgOption
+	if opts.blocks {
+		blocks := buildMrkdwnBlocks(text)
+		msgOpts = append(msgOpts,
+			slack.MsgOptionText(text, false), // fallback for notifications/previews
+			slack.MsgOptionBlocks(blocks...),
+		)
+	} else {
+		msgOpts = append(msgOpts, slack.MsgOptionText(text, false))
 	}
 	if opts.threadTS != "" {
 		msgOpts = append(msgOpts, slack.MsgOptionTS(opts.threadTS))
@@ -221,4 +256,54 @@ func unescapeShellArtifacts(text string) string {
 	text = strings.ReplaceAll(text, `\!`, "!")
 	text = strings.ReplaceAll(text, `\?`, "?")
 	return text
+}
+
+// maxBlockTextLen is Slack's limit for text in a single section block.
+const maxBlockTextLen = 3000
+
+// buildMrkdwnBlocks splits message text into Block Kit section blocks with
+// mrkdwn type. Long messages are split at paragraph boundaries to stay within
+// Slack's 3000-character-per-block limit.
+func buildMrkdwnBlocks(text string) []slack.Block {
+	chunks := splitForBlocks(text, maxBlockTextLen)
+	blocks := make([]slack.Block, 0, len(chunks))
+	for _, chunk := range chunks {
+		body := slack.NewTextBlockObject("mrkdwn", chunk, false, false)
+		blocks = append(blocks, slack.NewSectionBlock(body, nil, nil))
+	}
+	return blocks
+}
+
+// splitForBlocks splits text into chunks that fit within maxLen, preferring
+// to split at double-newline (paragraph) boundaries, then single newlines.
+func splitForBlocks(text string, maxLen int) []string {
+	if len(text) <= maxLen {
+		return []string{text}
+	}
+
+	var chunks []string
+	remaining := text
+
+	for len(remaining) > maxLen {
+		// Try to split at a paragraph boundary (double newline)
+		splitAt := -1
+		if idx := strings.LastIndex(remaining[:maxLen], "\n\n"); idx > 0 {
+			splitAt = idx
+		} else if idx := strings.LastIndex(remaining[:maxLen], "\n"); idx > 0 {
+			// Fall back to single newline
+			splitAt = idx
+		} else {
+			// Last resort: hard split at maxLen
+			splitAt = maxLen
+		}
+
+		chunks = append(chunks, strings.TrimSpace(remaining[:splitAt]))
+		remaining = strings.TrimSpace(remaining[splitAt:])
+	}
+
+	if remaining != "" {
+		chunks = append(chunks, remaining)
+	}
+
+	return chunks
 }
