@@ -7,8 +7,7 @@ import (
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/auth"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/channel"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/completion"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/digest"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/doctor"
+"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/doctor"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/dm"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/file"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/later"
@@ -30,8 +29,6 @@ func NewCmdRoot(f *cmdutil.Factory) *cobra.Command {
 		Short: "Slack CLI - message, search, and manage channels from the command line",
 		Long: `Work with Slack channels, messages, and users from your terminal.
 
-Integrates with ClickUp and GitHub CLIs for cross-tool developer workflows.
-
 GETTING STARTED
   slackbuzz app create          Create a Slack app with required scopes
   slackbuzz auth login           Log in with bot/user tokens
@@ -40,8 +37,6 @@ INBOX & ACTIVITY
   slackbuzz activity             See mentions, DMs, and threads (alias: inbox)
   slackbuzz threads              Threads you're participating in
   slackbuzz dm list              DM conversations with recent activity
-  slackbuzz digest               Cross-tool briefing (Slack + ClickUp + GitHub)
-
 MESSAGING
   slackbuzz message list <chan>  Read channel/thread history
   slackbuzz message send <chan>  Send a message
@@ -102,10 +97,6 @@ TIPS
 	laterCmd := later.NewCmdLater(f)
 	laterCmd.GroupID = "inbox"
 	cmd.AddCommand(laterCmd)
-
-	digestCmd := digest.NewCmdDigest(f)
-	digestCmd.GroupID = "inbox"
-	cmd.AddCommand(digestCmd)
 
 	// Messaging commands
 	messageCmd := message.NewCmdMessage(f)

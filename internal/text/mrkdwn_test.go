@@ -132,9 +132,24 @@ func TestConvertMarkdownToMrkdwn(t *testing.T) {
 			want:  "> This is a quote",
 		},
 		{
-			name:  "bullet list",
+			name:  "bullet list with hyphens",
 			input: "- item one\n- item two",
-			want:  "- item one\n- item two",
+			want:  "• item one\n• item two",
+		},
+		{
+			name:  "bullet list with asterisks",
+			input: "* item one\n* item two",
+			want:  "• item one\n• item two",
+		},
+		{
+			name:  "nested bullet list",
+			input: "- top\n  - nested",
+			want:  "• top\n  • nested",
+		},
+		{
+			name:  "hyphen in middle of text is not a bullet",
+			input: "this is a - test",
+			want:  "this is a - test",
 		},
 		{
 			name:  "emoji shortcodes",
@@ -151,7 +166,7 @@ func TestConvertMarkdownToMrkdwn(t *testing.T) {
 		{
 			name:  "full release notes style",
 			input: "## 🎨 UX & Design\n- **New animations** throughout\n- Fixed **spacing** issue",
-			want:  "*🎨 UX & Design*\n- *New animations* throughout\n- Fixed *spacing* issue",
+			want:  "*🎨 UX & Design*\n• *New animations* throughout\n• Fixed *spacing* issue",
 		},
 
 		// Edge cases

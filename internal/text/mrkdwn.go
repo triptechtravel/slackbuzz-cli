@@ -35,6 +35,10 @@ var (
 	// Convert to ───── divider (Slack has no native HR in mrkdwn text)
 	mdHorizontalRule = regexp.MustCompile(`(?m)^[\s]*([-*_]){3,}\s*$`)
 
+	// Markdown unordered list: - item or * item at start of line → • item
+	// Slack renders - as a literal hyphen, not a bullet. • is the real bullet.
+	mdUnorderedList = regexp.MustCompile(`(?m)^(\s*)[-*]\s+`)
+
 	// Markdown ordered list: 1. item → 1. item (already works, but detect for hints)
 	mdOrderedList = regexp.MustCompile(`(?m)^\s*\d+\.\s+`)
 
@@ -95,8 +99,12 @@ func ConvertMarkdownToMrkdwn(text string) string {
 	text = mdBoldDoubleAsterisk.ReplaceAllString(text, "*$1*")
 	text = mdBoldDoubleUnderscore.ReplaceAllString(text, "*$1*")
 
-	// Horizontal rules: --- → ─────
+	// Horizontal rules: --- → ───── (must come before bullet conversion)
 	text = mdHorizontalRule.ReplaceAllString(text, "─────")
+
+	// Unordered lists: - item or * item → • item
+	// Slack renders - as a literal hyphen; • is the actual bullet character.
+	text = mdUnorderedList.ReplaceAllString(text, "${1}• ")
 
 	return text
 }
@@ -152,7 +160,7 @@ Slack mrkdwn formatting reference:
   ` + "`code`" + `          Inline code
   ` + "```code```" + `      Code block
   > quote          Blockquote
-  • item           Bullet list (or - item)
+  • item           Bullet list (- and * auto-convert to •)
   1. item          Numbered list
   <url|label>      Hyperlink
   :emoji:          Emoji shortcode

@@ -13,7 +13,6 @@ Use the `slackbuzz` CLI instead of raw Slack API calls. It handles authenticatio
 - User wants to check Slack activity, inbox, or threads
 - User needs to search Slack messages or files
 - User wants to react to messages, set status, or manage saved items
-- User asks for a morning briefing or digest across Slack/ClickUp/GitHub
 - User mentions Slack channels, users, or message timestamps
 
 ## Authentication
@@ -108,21 +107,6 @@ slackbuzz dm list
 
 Activity detects ClickUp task IDs and GitHub PR/issue URLs in messages and shows actionable hints.
 
-## Cross-Tool Digest
-
-```bash
-# Full briefing: Slack + ClickUp + GitHub
-slackbuzz digest
-
-# Scoped briefings
-slackbuzz digest --slack-only
-slackbuzz digest --github-only
-slackbuzz digest --clickup-only
-slackbuzz digest --since 1d
-```
-
-Integrates with `clickup` and `gh` CLIs if installed. Gracefully skips unavailable tools.
-
 ## Reactions
 
 ```bash
@@ -208,7 +192,7 @@ The CLI automatically selects the correct token for each command. You do not nee
 | `react`, `react remove` | **Bot** | Reactions via bot |
 | `notify` | **Bot** | System/automated notifications |
 | `thread link` | **Bot** | Generates permalinks |
-| `activity`, `threads`, `digest` | **User** | Slack search API (user-only) |
+| `activity`, `threads` | **User** | Slack search API (user-only) |
 | `dm list` | **User** | Slack search API (user-only) |
 | `message search`, `file search` | **User** | Slack search API (user-only) |
 | `later list`, `add`, `remove` | **User** | Stars API (user-only) |
@@ -271,7 +255,25 @@ The CLI automatically strips common shell escape artifacts from message text bef
 - **Case-insensitive resolution**: User lookup matches display names and usernames regardless of case
 - **Permission feedback**: Missing tokens or scopes produce clear error messages. Use `slackbuzz auth status` to check capabilities.
 - **Deeplinks**: Output includes clickable Slack deeplinks
-- **Cross-tool**: Digest combines Slack, ClickUp, and GitHub activity
+## Formatting
+
+Messages auto-convert standard Markdown to Slack mrkdwn:
+- `**bold**` → `*bold*`
+- `# Header` → `*Header*` (bold on its own line)
+- `[text](url)` → `<url|text>`
+
+```bash
+# Auto-conversion happens by default
+slackbuzz send '#releases' "## 🚀 v5.4.0\n- **New feature**: offline images"
+
+# Use --blocks for Block Kit rendering (richer formatting, auto-splits long messages)
+slackbuzz send '#releases' --blocks "## Release Notes\n- *Feature*: offline images"
+
+# Use --raw to disable auto-conversion
+slackbuzz send '#dev' --raw "**this stays as double asterisks**"
+```
+
+Formatting hints are shown on stderr when Markdown syntax is detected and converted.
 
 ## Agent Mode
 
