@@ -11,8 +11,6 @@ Slack CLI - message, search, and manage channels from the command line
 
 Work with Slack channels, messages, and users from your terminal.
 
-Integrates with ClickUp and GitHub CLIs for cross-tool developer workflows.
-
 GETTING STARTED
   slackbuzz app create          Create a Slack app with required scopes
   slackbuzz auth login           Log in with bot/user tokens
@@ -21,8 +19,6 @@ INBOX & ACTIVITY
   slackbuzz activity             See mentions, DMs, and threads (alias: inbox)
   slackbuzz threads              Threads you're participating in
   slackbuzz dm list              DM conversations with recent activity
-  slackbuzz digest               Cross-tool briefing (Slack + ClickUp + GitHub)
-
 MESSAGING
   slackbuzz message list <chan>  Read channel/thread history
   slackbuzz message send <chan>  Send a message
@@ -59,13 +55,14 @@ TIPS
 * [slackbuzz auth](/slackbuzz-cli/reference/slackbuzz_auth/)	 - Authenticate with Slack
 * [slackbuzz channel](/slackbuzz-cli/reference/slackbuzz_channel/)	 - Manage Slack channels
 * [slackbuzz completion](/slackbuzz-cli/reference/slackbuzz_completion/)	 - Generate shell completion scripts
-* [slackbuzz digest](/slackbuzz-cli/reference/slackbuzz_digest/)	 - Cross-tool morning briefing (Slack + ClickUp + GitHub)
 * [slackbuzz dm](/slackbuzz-cli/reference/slackbuzz_dm/)	 - Direct message management
-* [slackbuzz file](/slackbuzz-cli/reference/slackbuzz_file/)	 - Search and manage files
+* [slackbuzz doctor](/slackbuzz-cli/reference/slackbuzz_doctor/)	 - Check token health and required scopes
+* [slackbuzz file](/slackbuzz-cli/reference/slackbuzz_file/)	 - Search, upload, and manage files
 * [slackbuzz later](/slackbuzz-cli/reference/slackbuzz_later/)	 - Saved/bookmarked items
 * [slackbuzz message](/slackbuzz-cli/reference/slackbuzz_message/)	 - Send and read Slack messages
 * [slackbuzz notify](/slackbuzz-cli/reference/slackbuzz_notify/)	 - Send formatted notifications
 * [slackbuzz react](/slackbuzz-cli/reference/slackbuzz_react/)	 - React to a message
+* [slackbuzz send](/slackbuzz-cli/reference/slackbuzz_send/)	 - Send a message (shortcut for 'message send')
 * [slackbuzz status](/slackbuzz-cli/reference/slackbuzz_status/)	 - Slack status management
 * [slackbuzz thread](/slackbuzz-cli/reference/slackbuzz_thread/)	 - Work with Slack threads
 * [slackbuzz threads](/slackbuzz-cli/reference/slackbuzz_threads/)	 - Show threads you're participating in

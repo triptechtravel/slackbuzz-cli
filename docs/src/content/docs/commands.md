@@ -20,7 +20,7 @@ The CLI automatically picks the correct token (bot or user) for each command. Yo
 | `react`, `react remove` | **Bot** | Reactions |
 | `notify` | **Bot** | System/automated notifications |
 | `thread link` | **Bot** | Generates permalinks |
-| `activity`, `threads`, `digest` | **User** | Search API (user-only) |
+| `activity`, `threads` | **User** | Search API (user-only) |
 | `dm list` | **User** | Search API (user-only) |
 | `message search`, `file search` | **User** | Search API (user-only) |
 | `later list`, `add`, `remove` | **User** | Stars API (user-only) |
@@ -167,42 +167,6 @@ Remove a saved message.
 ```sh
 slackbuzz later remove #general 1706000000.000000
 ```
-
----
-
-## digest
-
-### `digest`
-
-Cross-tool morning briefing combining Slack mentions, ClickUp tasks, and GitHub PRs.
-
-```sh
-# Full briefing
-slackbuzz digest
-
-# Only Slack section
-slackbuzz digest --slack-only
-
-# Only ClickUp section
-slackbuzz digest --clickup-only
-
-# Only GitHub section
-slackbuzz digest --github-only
-
-# JSON output
-slackbuzz digest --json
-```
-
-| Flag | Description |
-|------|-------------|
-| `--since DURATION` | How far back to search for Slack mentions |
-| `--slack-only` | Only show Slack section |
-| `--clickup-only` | Only show ClickUp section |
-| `--github-only` | Only show GitHub section |
-| `--json` | Output as JSON |
-| `--jq EXPR` | Filter JSON output with a jq expression |
-
-Requires the [ClickUp CLI](https://github.com/triptechtravel/clickup-cli) and [GitHub CLI](https://cli.github.com/) for the respective sections. Missing CLIs are gracefully skipped.
 
 ---
 
@@ -378,7 +342,36 @@ Quick actions:
 
 ## file
 
-Search files shared in Slack.
+Upload and search files shared in Slack.
+
+### `file upload <file-path>... <channel|user>`
+
+Upload one or more files to a channel or DM. Each file is uploaded individually and shared to the target.
+
+```sh
+# Upload a single file
+slackbuzz file upload report.pdf #general
+
+# Upload multiple files
+slackbuzz file upload chart1.png chart2.png #analytics
+
+# Upload with title and comment
+slackbuzz file upload data.csv #sales --title "Q4 Revenue" --comment "Updated data"
+
+# Upload to a DM
+slackbuzz file upload notes.txt @alice
+
+# Upload to a thread
+slackbuzz file upload results.png #dev --thread-ts 1706000000.000000
+```
+
+| Flag | Description |
+|------|-------------|
+| `--title TEXT` | File title in Slack (applies to first file) |
+| `--comment TEXT` | Initial comment posted with the file(s) |
+| `--thread-ts TIMESTAMP` | Thread timestamp to upload into |
+| `--json` | Output as JSON |
+| `--jq EXPR` | Filter JSON output with a jq expression |
 
 ### `file search <query>`
 

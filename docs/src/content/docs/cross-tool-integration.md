@@ -7,52 +7,6 @@ description: How slackbuzz bridges Slack, ClickUp, and GitHub from the terminal.
 
 SlackBuzz is designed as the glue between Slack, ClickUp, and GitHub CLIs. It detects references to other tools in your Slack messages and provides actionable hints.
 
-## The digest command
-
-The `digest` command combines activity from all three tools in a single view:
-
-```sh
-$ slackbuzz digest
-
-SLACK -- 3 unread mentions
-  @alice in #dev        "Can you review PR #42?"          2h ago
-  @bob in #backend      "CU-abc needs your input"         5h ago
-  @sarah DM             "meeting at 3?"                   1d ago
-
-CLICKUP -- 2 tasks assigned to you
-  CU-abc123  In Review   API redesign
-  CU-def456  In Progress Deploy pipeline fix
-
-GITHUB -- 1 PR needs your review
-  #42  feat: add caching layer    alice  +120 -30
-
----
-Quick actions:
-  slackbuzz message send #dev "reviewing now"
-  clickup task update CU-abc123 --status complete
-  gh pr review 42 --approve
-```
-
-### How it works
-
-The digest shells out to the `clickup` and `gh` CLIs if installed:
-
-- **Slack**: Uses `search.messages` API to find your recent mentions
-- **ClickUp**: Runs `clickup task list --assignee me --json` to find your assigned tasks
-- **GitHub**: Runs `gh pr list --review-requested=@me --json` to find PRs needing review
-
-Sections are gracefully skipped if a CLI is not installed (`exec.LookPath`).
-
-### Flags
-
-```sh
-slackbuzz digest --since 2d        # Look back 2 days instead of default
-slackbuzz digest --slack-only      # Only show Slack section
-slackbuzz digest --clickup-only    # Only show ClickUp section
-slackbuzz digest --github-only     # Only show GitHub section
-slackbuzz digest --json            # Structured output
-```
-
 ## Enrichment in activity views
 
 The `activity` and `threads` commands auto-detect cross-tool references in message text:
@@ -88,8 +42,8 @@ Deeplink format: `slack://channel?team=TEAM_ID&id=CHANNEL_ID&message=TIMESTAMP`
 A typical morning workflow combining all three tools:
 
 ```sh
-# 1. Check what needs attention across all tools
-slackbuzz digest
+# 1. Check what needs attention
+slackbuzz activity
 
 # 2. Read the thread that mentions a ClickUp task
 slackbuzz message list #backend --thread-ts 1706000000.000000
@@ -110,12 +64,12 @@ slackbuzz react #backend 1706000000.000000 :eyes:
 slackbuzz later add #backend 1706000000.000000
 ```
 
-## Required CLIs
+## Related CLIs
 
-| Tool | Install | Used by |
-|------|---------|---------|
+| Tool | Install | Used for |
+|------|---------|----------|
 | **slackbuzz** | `brew install triptechtravel/tap/slackbuzz` | Core Slack operations |
-| **clickup** | `brew install triptechtravel/tap/clickup` | `digest` ClickUp section, task ID enrichment hints |
-| **gh** | `brew install gh` | `digest` GitHub section, PR URL enrichment hints |
+| **clickup** | `brew install triptechtravel/tap/clickup` | Follow up on ClickUp task ID enrichment hints |
+| **gh** | `brew install gh` | Follow up on GitHub PR URL enrichment hints |
 
 All three CLIs store credentials in the system keyring and support `--json` output for programmatic access.

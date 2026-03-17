@@ -183,7 +183,6 @@ printf "  %s│%s                                                  %s│%s\n" "$
 printf "  %s│%s  ${BOLD}Inbox & activity${RESET}                                %s│%s\n" "$CYAN" "$RESET" "$CYAN" "$RESET"
 printf "  %s│%s    slackbuzz activity           # mentions       %s│%s\n" "$CYAN" "$RESET" "$CYAN" "$RESET"
 printf "  %s│%s    slackbuzz inbox               # alias         %s│%s\n" "$CYAN" "$RESET" "$CYAN" "$RESET"
-printf "  %s│%s    slackbuzz digest              # cross-tool    %s│%s\n" "$CYAN" "$RESET" "$CYAN" "$RESET"
 printf "  %s│%s                                                  %s│%s\n" "$CYAN" "$RESET" "$CYAN" "$RESET"
 printf "  %s│%s  ${BOLD}Messaging${RESET}                                       %s│%s\n" "$CYAN" "$RESET" "$CYAN" "$RESET"
 printf "  %s│%s    slackbuzz send '#general' \"Hi\"  # send msg   %s│%s\n" "$CYAN" "$RESET" "$CYAN" "$RESET"

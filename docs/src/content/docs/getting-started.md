@@ -110,18 +110,8 @@ Clear it:
 slackbuzz status clear
 ```
 
-## Step 6: Get a cross-tool briefing
-
-If you have the ClickUp CLI and GitHub CLI installed, get a combined view of everything across tools:
-
-```sh
-slackbuzz digest
-```
-
-This shows Slack mentions, ClickUp tasks assigned to you, and GitHub PRs needing your review.
-
 ## Next steps
 
 - See the full [Command reference](/slackbuzz-cli/commands/) for all available commands and flags.
-- Learn about [Cross-tool integration](/slackbuzz-cli/cross-tool-integration/) to combine Slack, ClickUp, and GitHub workflows.
+- Learn about [Cross-tool integration](/slackbuzz-cli/cross-tool-integration/) for ClickUp and GitHub enrichment in activity views.
 - Read [Using with AI agents](/slackbuzz-cli/ai-agents/) for integrating the CLI with Claude Code, Copilot, and Cursor.

@@ -47,8 +47,8 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
   <Card title="Activity inbox" icon="pencil">
     See mentions, DMs, and threads that need your attention -- with ClickUp and GitHub enrichment.
   </Card>
-  <Card title="Cross-tool digest" icon="list-format">
-    Morning briefing combining Slack mentions, ClickUp tasks, and GitHub PRs in one view.
+  <Card title="File uploads" icon="list-format">
+    Upload files to channels and DMs with multi-file and thread support.
   </Card>
   <Card title="Messaging" icon="rocket">
     Send messages, reply to threads, react to messages, and search across your workspace.
@@ -86,9 +86,6 @@ slackbuzz app create
 
 # Check your inbox
 slackbuzz activity
-
-# Get a cross-tool morning briefing
-slackbuzz digest
 
 # Send a message
 slackbuzz message send #general "Hello from the terminal!"

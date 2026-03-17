@@ -52,5 +52,5 @@ slackbuzz file search <query> [flags]
 
 ### SEE ALSO
 
-* [slackbuzz file](/slackbuzz-cli/reference/slackbuzz_file/)	 - Search and manage files
+* [slackbuzz file](/slackbuzz-cli/reference/slackbuzz_file/)	 - Search, upload, and manage files
 

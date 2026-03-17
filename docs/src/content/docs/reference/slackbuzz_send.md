@@ -1,11 +1,11 @@
 ---
-title: "slackbuzz message send"
-description: "Auto-generated reference for slackbuzz message send"
+title: "slackbuzz send"
+description: "Auto-generated reference for slackbuzz send"
 ---
 
-## slackbuzz message send
+## slackbuzz send
 
-Send a message to a channel or DM
+Send a message (shortcut for 'message send')
 
 ### Synopsis
 
@@ -24,7 +24,7 @@ mrkdwn rendering). Long messages are automatically split into multiple
 blocks (Slack's 3000-char limit per block).
 
 ```
-slackbuzz message send <channel|user> [text] [flags]
+slackbuzz send <channel|user> [text] [flags]
 ```
 
 ### Examples
@@ -70,5 +70,5 @@ slackbuzz message send <channel|user> [text] [flags]
 
 ### SEE ALSO
 
-* [slackbuzz message](/slackbuzz-cli/reference/slackbuzz_message/)	 - Send and read Slack messages
+* [slackbuzz](/slackbuzz-cli/reference/slackbuzz/)	 - Slack CLI - message, search, and manage channels from the command line
 

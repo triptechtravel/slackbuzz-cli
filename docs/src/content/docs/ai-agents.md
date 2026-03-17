@@ -58,18 +58,6 @@ slackbuzz channel list --json
 slackbuzz activity --json --jq '[.[] | select(.type == "mention")]'
 ```
 
-### Cross-tool context
-
-The `digest` command gives agents a complete picture across Slack, ClickUp, and GitHub:
-
-```sh
-# Get cross-tool context in one call
-slackbuzz digest --json
-
-# Slack mentions only
-slackbuzz digest --slack-only --json
-```
-
 ### ClickUp and GitHub enrichment
 
 Activity views auto-detect ClickUp task IDs and GitHub PR URLs. The JSON output includes these references, allowing agents to follow up with the appropriate CLI:
@@ -131,7 +119,7 @@ An agent can prepare a morning standup summary:
 
 ```sh
 # Get everything from the last day
-slackbuzz digest --since 1d --json
+slackbuzz activity --all --since 1d --json
 
 # Check saved items that need follow-up
 slackbuzz later list --json
@@ -209,7 +197,7 @@ slackbuzz doctor
 - Use `--json` output when you need the agent to parse data programmatically
 - Use `slackbuzz activity --json` to discover what needs attention
 - Use `slackbuzz message list --json` to give the agent context from channel discussions
-- Use `slackbuzz digest --json` to give the agent cross-tool context
+- Use `slackbuzz activity --all --json` to give the agent full context across mentions, DMs, and threads
 - The activity view includes channel IDs, timestamps, and permalinks that agents can use to take action
 - Use `slackbuzz message edit` and `slackbuzz message delete` to correct mistakes
 - Use `slackbuzz file search` to find shared files and documents

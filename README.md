@@ -8,14 +8,13 @@ A command-line tool for working with Slack messages, channels, and cross-tool wo
 [![Go Report Card](https://goreportcard.com/badge/github.com/triptechtravel/slackbuzz-cli)](https://goreportcard.com/report/github.com/triptechtravel/slackbuzz-cli)
 [![Go Reference](https://pkg.go.dev/badge/github.com/triptechtravel/slackbuzz-cli.svg)](https://pkg.go.dev/github.com/triptechtravel/slackbuzz-cli)
 
-`slackbuzz` bridges Slack, ClickUp, and GitHub from your terminal. Read your inbox, reply to messages, manage your status, and get a cross-tool morning briefing without opening a browser.
+`slackbuzz` brings Slack to your terminal. Read your inbox, reply to messages, manage your status, upload files, and search your workspace without opening a browser.
 
 ## Features
 
 - **Activity inbox** -- see mentions, DMs, and threads that need your attention (alias: `inbox`)
-- **Cross-tool digest** -- morning briefing combining Slack mentions, ClickUp tasks, and GitHub PRs
 - **Message management** -- list, send, search, edit, and delete messages in any channel or DM
-- **File search** -- search files shared across your workspace
+- **File upload & search** -- upload files to channels/DMs (multi-file, thread support) and search shared files
 - **Thread support** -- read and reply to threads
 - **Reactions** -- add and remove reactions, see reactions inline in activity views
 - **Saved items** -- save messages for later and manage your bookmarks
@@ -75,10 +74,10 @@ Send a message:
 slackbuzz send '#general' "Hello from the terminal!"
 ```
 
-Get a cross-tool morning briefing:
+Upload a file:
 
 ```sh
-slackbuzz digest
+slackbuzz file upload report.pdf '#general'
 ```
 
 ## Team setup
@@ -103,7 +102,6 @@ The script installs slackbuzz, sets up the Claude Code skill, and walks through 
 | `slackbuzz activity --all --since 1d` | Everything from the last day |
 | `slackbuzz threads` | Show threads you're participating in |
 | `slackbuzz dm list` | List DM conversations with recent activity |
-| `slackbuzz digest` | Cross-tool briefing (Slack + ClickUp + GitHub) |
 | `slackbuzz later list` | Show saved/bookmarked messages |
 | `slackbuzz later add <channel> <ts>` | Save a message for later |
 | `slackbuzz later remove <channel> <ts>` | Unsave a message |
@@ -118,6 +116,7 @@ The script installs slackbuzz, sets up the Claude Code skill, and walks through 
 | `slackbuzz message edit <channel> <ts> "text"` | Edit a message |
 | `slackbuzz message delete <channel> <ts>` | Delete a message |
 | `slackbuzz message search <query>` | Search messages (user token required) |
+| `slackbuzz file upload <file>... <channel>` | Upload files to a channel or DM |
 | `slackbuzz file search <query>` | Search files (user token required) |
 | `slackbuzz react <channel> <ts> :emoji:` | React to a message |
 | `slackbuzz react remove <channel> <ts> :emoji:` | Remove a reaction |
@@ -178,35 +177,9 @@ The `slackbuzz app create` command creates a Slack app pre-configured with all r
 
 **User token (`xoxp-`):** `channels:read`, `chat:write`, `groups:read`, `im:read`, `im:write`, `mpim:read`, `search:read`, `stars:read`, `stars:write`, `users:read`, `users.profile:read`, `users.profile:write`
 
-## Cross-tool integration
+## Cross-tool enrichment
 
-The `digest` command combines activity from Slack, ClickUp, and GitHub in a single view:
-
-```sh
-$ slackbuzz digest
-
-SLACK -- 3 unread mentions
-  @alice in #dev        "Can you review PR #42?"          2h ago
-  @bob in #backend      "CU-abc needs your input"         5h ago
-  @sarah DM             "meeting at 3?"                   1d ago
-
-CLICKUP -- 2 tasks assigned to you
-  CU-abc123  In Review   API redesign
-  CU-def456  In Progress Deploy pipeline fix
-
-GITHUB -- 1 PR needs your review
-  #42  feat: add caching layer    alice  +120 -30
-
----
-Quick actions:
-  slackbuzz message send #dev "reviewing now"
-  clickup task update CU-abc123 --status complete
-  gh pr review 42 --approve
-```
-
-The digest shells out to the `clickup` and `gh` CLIs if installed. Sections are gracefully skipped if a CLI isn't available.
-
-The activity view also auto-detects ClickUp task IDs (`CU-abc123`) and GitHub PR/issue URLs in messages and shows actionable hints:
+The activity view auto-detects ClickUp task IDs (`CU-abc123`) and GitHub PR/issue URLs in messages and shows actionable hints:
 
 ```sh
 $ slackbuzz activity
@@ -273,9 +246,6 @@ slackbuzz thread #engineering 1706000000.000000 "Fix deployed, see PR #42"
 
 # AI agent reacts to acknowledge
 slackbuzz react #engineering 1706000000.000000 :white_check_mark:
-
-# AI agent gets cross-tool context
-slackbuzz digest --json
 ```
 
 The `--json` flag on all commands outputs structured data that agents can parse. The activity view includes channel IDs, timestamps, and permalinks that agents can use to take action.
