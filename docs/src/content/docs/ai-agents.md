@@ -140,23 +140,34 @@ slackbuzz later list --json
 slackbuzz threads --since 1d --json
 ```
 
-## Claude Code skill (plugin marketplace)
+## Claude Code skill
 
-Install the SlackBuzz CLI skill into Claude Code so it automatically uses the CLI for Slack operations. No need to clone this repo.
+Install the SlackBuzz CLI skill into Claude Code so it automatically uses the CLI for Slack operations.
+
+### Quick install (no clone required)
 
 ```sh
-# In Claude Code, run:
-/plugin marketplace add triptechtravel/slackbuzz-cli
-/plugin install slackbuzz-cli@slackbuzz-cli
+mkdir -p ~/.claude/skills/slackbuzz-cli
+curl -fsSL https://raw.githubusercontent.com/triptechtravel/slackbuzz-cli/main/skills/slackbuzz-cli/SKILL.md \
+  -o ~/.claude/skills/slackbuzz-cli/SKILL.md
 ```
 
-Once installed, Claude Code will automatically use `slackbuzz` commands when you ask it to send messages, check activity, search Slack, manage reactions, or set your status.
+### From a local clone
 
-If you have the repo cloned locally, you can alternatively symlink the skill:
+If you have the repo checked out, symlink the skill so it stays up to date with `git pull`:
 
 ```sh
 make install-skill
 ```
+
+### What the skill does
+
+Once installed, Claude Code will automatically use `slackbuzz` commands when you ask it to interact with Slack. You can use natural language instead of remembering CLI flags:
+
+- "Check my Slack inbox"
+- "Send @alice a message about the deployment"
+- "Search Slack for the API spec discussion"
+- "Set my status to deep work for 2 hours"
 
 ### @mention resolution
 

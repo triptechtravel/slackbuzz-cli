@@ -29,9 +29,9 @@ func TestUnescapeShellArtifacts(t *testing.T) {
 			want: "Hello world",
 		},
 		{
-			name: "legitimate backslash preserved",
+			name: "escaped backslash collapses",
 			text: `path\\to\\file`,
-			want: `path\\to\\file`,
+			want: `path\to\file`,
 		},
 		{
 			name: "mixed content",
@@ -47,6 +47,21 @@ func TestUnescapeShellArtifacts(t *testing.T) {
 			name: "only escape",
 			text: `\!`,
 			want: "!",
+		},
+		{
+			name: "literal newlines",
+			text: `line one\n\nline two`,
+			want: "line one\n\nline two",
+		},
+		{
+			name: "literal tab",
+			text: `col1\tcol2`,
+			want: "col1\tcol2",
+		},
+		{
+			name: "mixed escapes with newlines",
+			text: `Build passed\!\n\nDetails at link`,
+			want: "Build passed!\n\nDetails at link",
 		},
 	}
 

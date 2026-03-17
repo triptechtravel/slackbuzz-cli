@@ -251,10 +251,17 @@ func resolveTargetUserID(r *api.Resolver, target string) string {
 
 // unescapeShellArtifacts removes common shell escape sequences that leak into
 // CLI arguments. For example, zsh's history expansion escapes ! as \! when
-// passed through double-quoted strings.
+// passed through double-quoted strings, and literal \n sequences appear when
+// users include newlines in quoted arguments.
 func unescapeShellArtifacts(text string) string {
+	// Protect escaped backslashes (\\) before processing other sequences
+	const placeholder = "\x00BACKSLASH\x00"
+	text = strings.ReplaceAll(text, `\\`, placeholder)
 	text = strings.ReplaceAll(text, `\!`, "!")
 	text = strings.ReplaceAll(text, `\?`, "?")
+	text = strings.ReplaceAll(text, `\n`, "\n")
+	text = strings.ReplaceAll(text, `\t`, "\t")
+	text = strings.ReplaceAll(text, placeholder, `\`)
 	return text
 }
 
