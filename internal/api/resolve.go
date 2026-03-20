@@ -164,6 +164,52 @@ func LooksLikeUser(target string) bool {
 	return true
 }
 
+// ResolveTarget resolves a bare name to a channel ID, trying the most likely
+// path first based on the name's syntax, then falling back to the other.
+//
+// Explicit prefixes are unambiguous:
+//
+//	#general → channel only (no fallback)
+//	@alice   → DM only     (no fallback)
+//
+// Bare names (e.g. "stand-up", "herman") are ambiguous — the name could be
+// either a channel or a user. We try the heuristic-preferred path first
+// (user for bare names) and fall back to the other on failure.
+//
+// Returns the resolved channel ID and whether the target resolved as a DM.
+func (r *Resolver) ResolveTarget(target string) (channelID string, isDM bool, err error) {
+	// Explicit #channel — no ambiguity
+	if strings.HasPrefix(target, "#") {
+		id, err := r.ResolveChannel(target)
+		return id, false, err
+	}
+
+	// Explicit @user or user ID — no ambiguity
+	if strings.HasPrefix(target, "@") || isUserID(target) {
+		id, err := r.ResolveDM(target)
+		return id, true, err
+	}
+
+	// Explicit channel ID — no ambiguity
+	if isChannelID(target) {
+		return target, false, nil
+	}
+
+	// Bare name — ambiguous. Try user (DM) first, fall back to channel.
+	id, dmErr := r.ResolveDM(target)
+	if dmErr == nil {
+		return id, true, nil
+	}
+
+	id, chErr := r.ResolveChannel(target)
+	if chErr == nil {
+		return id, false, nil
+	}
+
+	// Both failed — return a combined error
+	return "", false, fmt.Errorf("could not resolve %q as a user or channel", target)
+}
+
 func (r *Resolver) loadUsers() error {
 	r.mu.Lock()
 	if r.usersLoaded {

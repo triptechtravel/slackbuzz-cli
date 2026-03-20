@@ -108,13 +108,9 @@ func sendRun(opts *sendOptions) error {
 
 	resolver := api.NewResolver(client.Slack)
 
-	// Resolve target to a channel ID — auto-detect DMs vs channels
-	var channelID string
-	if api.LooksLikeUser(opts.channel) {
-		channelID, err = resolver.ResolveDM(opts.channel)
-	} else {
-		channelID, err = resolver.ResolveChannel(opts.channel)
-	}
+	// Resolve target to a channel ID — auto-detect DMs vs channels.
+	// ResolveTarget handles bare names by trying user (DM) first, then channel.
+	channelID, _, err := resolver.ResolveTarget(opts.channel)
 
 	// Bot-fallback: if resolution failed with missing_scope on the user token,
 	// retry with the bot client (which typically has channels:read).
@@ -123,11 +119,7 @@ func sendRun(opts *sendOptions) error {
 		if botErr == nil {
 			fmt.Fprintf(ios.ErrOut, "%s User token missing scope for channel lookup — falling back to bot token\n", cs.Yellow("!"))
 			botResolver := api.NewResolver(botClient.Slack)
-			if api.LooksLikeUser(opts.channel) {
-				channelID, err = botResolver.ResolveDM(opts.channel)
-			} else {
-				channelID, err = botResolver.ResolveChannel(opts.channel)
-			}
+			channelID, _, err = botResolver.ResolveTarget(opts.channel)
 		}
 	}
 

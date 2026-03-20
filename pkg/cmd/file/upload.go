@@ -102,14 +102,10 @@ func uploadRun(opts *uploadOptions) error {
 		}
 	}
 
-	// Resolve channel/DM
+	// Resolve channel/DM — ResolveTarget handles bare names by trying
+	// user (DM) first, then falling back to channel.
 	resolver := api.NewResolver(client.Slack)
-	var channelID string
-	if api.LooksLikeUser(opts.channel) {
-		channelID, err = resolver.ResolveDM(opts.channel)
-	} else {
-		channelID, err = resolver.ResolveChannel(opts.channel)
-	}
+	channelID, _, err := resolver.ResolveTarget(opts.channel)
 
 	// If resolution fails with missing scope, try the other token
 	if err != nil && api.IsMissingScopeError(err) {
@@ -120,11 +116,7 @@ func uploadRun(opts *uploadOptions) error {
 		if altErr == nil {
 			fmt.Fprintf(ios.ErrOut, "%s Retrying with alternate token\n", cs.Yellow("!"))
 			altResolver := api.NewResolver(altClient.Slack)
-			if api.LooksLikeUser(opts.channel) {
-				channelID, err = altResolver.ResolveDM(opts.channel)
-			} else {
-				channelID, err = altResolver.ResolveChannel(opts.channel)
-			}
+			channelID, _, err = altResolver.ResolveTarget(opts.channel)
 			if err == nil {
 				client = altClient
 			}
