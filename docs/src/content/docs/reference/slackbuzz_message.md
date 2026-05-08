@@ -22,7 +22,7 @@ Post messages to channels, read channel history, and search messages.
 * [slackbuzz](/slackbuzz-cli/reference/slackbuzz/)	 - Slack CLI - message, search, and manage channels from the command line
 * [slackbuzz message delete](/slackbuzz-cli/reference/slackbuzz_message_delete/)	 - Delete a message
 * [slackbuzz message edit](/slackbuzz-cli/reference/slackbuzz_message_edit/)	 - Edit a message
-* [slackbuzz message list](/slackbuzz-cli/reference/slackbuzz_message_list/)	 - List messages in a channel
+* [slackbuzz message list](/slackbuzz-cli/reference/slackbuzz_message_list/)	 - List messages in a channel or DM
 * [slackbuzz message search](/slackbuzz-cli/reference/slackbuzz_message_search/)	 - Search messages (requires user token)
 * [slackbuzz message send](/slackbuzz-cli/reference/slackbuzz_message_send/)	 - Send a message to a channel or DM
 

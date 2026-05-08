@@ -1,11 +1,13 @@
 package file
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/internal/text"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
@@ -84,30 +86,52 @@ func searchRun(opts *searchOptions) error {
 		query += fmt.Sprintf(" type:%s", opts.fileType)
 	}
 
-	params := slack.SearchParameters{
-		Sort:          "timestamp",
-		SortDirection: "desc",
-		Count:         opts.limit,
-		Page:          opts.page,
-	}
-
-	result, err := client.Slack.SearchFiles(query, params)
+	resp, err := slackapi.SearchFiles(context.Background(), client.API, &slackapi.SearchFilesParams{
+		Query:   query,
+		Sort:    "timestamp",
+		SortDir: "desc",
+		Count:   opts.limit,
+		Page:    opts.page,
+	})
 	if err != nil {
 		return fmt.Errorf("search failed: %w", err)
 	}
 
-	if result.Total == 0 {
+	type fileMatch struct {
+		Title      string   `json:"title"`
+		Name       string   `json:"name"`
+		User       string   `json:"user"`
+		Timestamp  int      `json:"timestamp"`
+		PrettyType string   `json:"pretty_type"`
+		Channels   []string `json:"channels"`
+		Permalink  string   `json:"permalink"`
+	}
+	var result struct {
+		Files struct {
+			Total   int         `json:"total"`
+			Matches []fileMatch `json:"matches"`
+			Paging  struct {
+				Page  int `json:"page"`
+				Pages int `json:"pages"`
+			} `json:"paging"`
+		} `json:"files"`
+	}
+	if err := json.Unmarshal(resp.Raw, &result); err != nil {
+		return fmt.Errorf("decode search result: %w", err)
+	}
+
+	if result.Files.Total == 0 {
 		fmt.Fprintln(ios.Out, "No files found.")
 		return nil
 	}
 
 	if opts.json.WantsJSON() {
-		return opts.json.OutputJSON(ios.Out, result.Matches)
+		return opts.json.OutputJSON(ios.Out, result.Files.Matches)
 	}
 
-	fmt.Fprintf(ios.Out, "%s results for %q\n\n", cs.Bold(fmt.Sprintf("%d", result.Total)), opts.query)
+	fmt.Fprintf(ios.Out, "%s results for %q\n\n", cs.Bold(fmt.Sprintf("%d", result.Files.Total)), opts.query)
 
-	for _, f := range result.Matches {
+	for _, f := range result.Files.Matches {
 		title := f.Title
 		if title == "" {
 			title = f.Name
@@ -143,10 +167,10 @@ func searchRun(opts *searchOptions) error {
 	}
 
 	// Pagination footer
-	if result.Paging.Pages > 1 {
+	if result.Files.Paging.Pages > 1 {
 		fmt.Fprintf(ios.Out, "%s\n",
 			cs.Gray(fmt.Sprintf("Page %d of %d (%d total results) — use --page %d to see more",
-				result.Paging.Page, result.Paging.Pages, result.Total, result.Paging.Page+1)))
+				result.Files.Paging.Page, result.Files.Paging.Pages, result.Files.Total, result.Files.Paging.Page+1)))
 	}
 
 	return nil

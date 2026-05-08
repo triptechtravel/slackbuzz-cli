@@ -1,12 +1,13 @@
 package notify
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -67,7 +68,7 @@ func notifyRun(opts *notifyOptions) error {
 		return err
 	}
 
-	resolver := api.NewResolver(client.Slack)
+	resolver := api.NewResolver(client.API)
 	channelID, err := resolver.ResolveChannel(opts.channel)
 	if err != nil {
 		return err
@@ -85,7 +86,7 @@ func notifyRun(opts *notifyOptions) error {
 		}
 	}
 
-	var blocks []slack.Block
+	var blocks []slackapi.Block
 	var fallbackText string
 
 	switch {
@@ -103,15 +104,16 @@ func notifyRun(opts *notifyOptions) error {
 		fallbackText = message
 	}
 
-	msgOpts := []slack.MsgOption{
-		slack.MsgOptionText(fallbackText, false),
-		slack.MsgOptionBlocks(blocks...),
-	}
-
-	respChannel, respTS, err := client.Slack.PostMessage(channelID, msgOpts...)
+	resp, err := slackapi.ChatPostMessage(context.Background(), client.API, &slackapi.ChatPostMessageParams{
+		Channel: channelID,
+		Text:    fallbackText,
+		Blocks:  slackapi.BlocksJSON(blocks),
+	})
 	if err != nil {
 		return fmt.Errorf("failed to send notification: %w", err)
 	}
+	respChannel := resp.Channel
+	respTS := resp.TS
 
 	if opts.json.WantsJSON() {
 		result := map[string]string{
@@ -126,21 +128,16 @@ func notifyRun(opts *notifyOptions) error {
 	return nil
 }
 
-func buildReleaseBlocks(version string) []slack.Block {
-	headerText := slack.NewTextBlockObject("plain_text", fmt.Sprintf("🚀 Release %s", version), true, false)
-	header := slack.NewHeaderBlock(headerText)
-
-	body := slack.NewTextBlockObject("mrkdwn",
-		fmt.Sprintf("*Version %s* has been released.\n\nCheck the release notes for details.", version),
-		false, false)
-	section := slack.NewSectionBlock(body, nil, nil)
-
-	divider := slack.NewDividerBlock()
-
-	return []slack.Block{header, divider, section}
+func buildReleaseBlocks(version string) []slackapi.Block {
+	header := slackapi.NewHeaderBlock(slackapi.NewPlainText(fmt.Sprintf("🚀 Release %s", version)))
+	section := slackapi.NewSectionBlock(
+		slackapi.NewMrkdwnText(fmt.Sprintf("*Version %s* has been released.\n\nCheck the release notes for details.", version)),
+		nil, nil)
+	divider := slackapi.NewDividerBlock()
+	return []slackapi.Block{header, divider, section}
 }
 
-func buildTaskBlocks(taskID, status string) []slack.Block {
+func buildTaskBlocks(taskID, status string) []slackapi.Block {
 	taskURL := fmt.Sprintf("https://app.clickup.com/t/%s", taskID)
 
 	var statusLine string
@@ -148,24 +145,17 @@ func buildTaskBlocks(taskID, status string) []slack.Block {
 		statusLine = fmt.Sprintf("\n*Status:* %s", status)
 	}
 
-	body := slack.NewTextBlockObject("mrkdwn",
-		fmt.Sprintf("📋 *Task Update*\n\nTask: <%s|%s>%s",
-			taskURL, taskID, statusLine),
-		false, false)
-	section := slack.NewSectionBlock(body, nil, nil)
-
-	return []slack.Block{section}
+	section := slackapi.NewSectionBlock(
+		slackapi.NewMrkdwnText(fmt.Sprintf("📋 *Task Update*\n\nTask: <%s|%s>%s", taskURL, taskID, statusLine)),
+		nil, nil)
+	return []slackapi.Block{section}
 }
 
-func buildMessageBlocks(message string) []slack.Block {
-	// If message is short, use a section. If multi-line, preserve formatting.
-	body := slack.NewTextBlockObject("mrkdwn", message, false, false)
-	section := slack.NewSectionBlock(body, nil, nil)
-
+func buildMessageBlocks(message string) []slackapi.Block {
+	section := slackapi.NewSectionBlock(slackapi.NewMrkdwnText(message), nil, nil)
 	if strings.Contains(message, "\n") {
-		divider := slack.NewDividerBlock()
-		return []slack.Block{divider, section, divider}
+		divider := slackapi.NewDividerBlock()
+		return []slackapi.Block{divider, section, divider}
 	}
-
-	return []slack.Block{section}
+	return []slackapi.Block{section}
 }

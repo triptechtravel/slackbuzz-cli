@@ -5,23 +5,28 @@ description: "Auto-generated reference for slackbuzz message list"
 
 ## slackbuzz message list
 
-List messages in a channel
+List messages in a channel or DM
 
 ### Synopsis
 
-Read message history from a Slack channel or thread.
+Read message history from a Slack channel, DM, or thread.
 
-The channel argument accepts #channel-name or a channel ID.
+The argument accepts:
+  #channel-name or channel ID — read channel history
+  @user, user ID, or bare username — read DM history (auto-opens the DM conversation)
 
 ```
-slackbuzz message list <channel> [flags]
+slackbuzz message list <channel-or-user> [flags]
 ```
 
 ### Examples
 
 ```
-  # List recent messages
+  # List recent messages in a channel
   slackbuzz message list #general
+
+  # List recent DM history with a user
+  slackbuzz message list @alice
 
   # List with limit
   slackbuzz message list #general --limit 20

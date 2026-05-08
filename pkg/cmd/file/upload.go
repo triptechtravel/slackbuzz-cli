@@ -1,13 +1,14 @@
 package file
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -104,7 +105,7 @@ func uploadRun(opts *uploadOptions) error {
 
 	// Resolve channel/DM — ResolveTarget handles bare names by trying
 	// user (DM) first, then falling back to channel.
-	resolver := api.NewResolver(client.Slack)
+	resolver := api.NewResolver(client.API)
 	channelID, _, err := resolver.ResolveTarget(opts.channel)
 
 	// If resolution fails with missing scope, try the other token
@@ -115,7 +116,7 @@ func uploadRun(opts *uploadOptions) error {
 		}
 		if altErr == nil {
 			fmt.Fprintf(ios.ErrOut, "%s Retrying with alternate token\n", cs.Yellow("!"))
-			altResolver := api.NewResolver(altClient.Slack)
+			altResolver := api.NewResolver(altClient.API)
 			channelID, _, err = altResolver.ResolveTarget(opts.channel)
 			if err == nil {
 				client = altClient
@@ -128,9 +129,10 @@ func uploadRun(opts *uploadOptions) error {
 	}
 
 	var results []uploadResult
+	ctx := context.Background()
 
 	for i, fp := range opts.filePaths {
-		info, _ := os.Stat(fp) // already validated above
+		_, _ = os.Stat(fp) // already validated above
 		fileName := filepath.Base(fp)
 
 		title := fileName
@@ -138,30 +140,27 @@ func uploadRun(opts *uploadOptions) error {
 			title = opts.title
 		}
 
-		params := slack.UploadFileV2Parameters{
-			File:     fp,
-			FileSize: int(info.Size()),
+		params := &slackapi.UploadFileParams{
+			FilePath: fp,
 			Filename: fileName,
 			Title:    title,
-			Channel:  channelID,
+			Channels: channelID,
 		}
-
-		// Only attach the comment to the first file upload
 		if opts.comment != "" && i == 0 {
 			params.InitialComment = opts.comment
 		}
 		if opts.threadTS != "" {
-			params.ThreadTimestamp = opts.threadTS
+			params.ThreadTS = opts.threadTS
 		}
 
-		summary, err := client.Slack.UploadFileV2(params)
+		summary, err := slackapi.UploadFile(ctx, client.API, params)
 		if err != nil {
 			return fmt.Errorf("failed to upload %s: %s", fileName, api.FormatError(err))
 		}
 
 		results = append(results, uploadResult{
-			FileID:   summary.ID,
-			Title:    summary.Title,
+			FileID:   summary.File.ID,
+			Title:    summary.File.Title,
 			Filename: fileName,
 			Channel:  channelID,
 		})

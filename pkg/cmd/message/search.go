@@ -1,12 +1,14 @@
 package message
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/internal/text"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
@@ -112,33 +114,55 @@ func searchRun(opts *searchOptions) error {
 		query += fmt.Sprintf(" during:%s", opts.during)
 	}
 
-	params := slack.SearchParameters{
-		Sort:          opts.sort,
-		SortDirection: "desc",
-		Count:         opts.limit,
-		Page:          opts.page,
-	}
-
-	result, err := client.Slack.SearchMessages(query, params)
+	resp, err := slackapi.SearchMessages(context.Background(), client.API, &slackapi.SearchMessagesParams{
+		Query:   query,
+		Sort:    opts.sort,
+		SortDir: "desc",
+		Count:   opts.limit,
+		Page:    opts.page,
+	})
 	if err != nil {
 		return fmt.Errorf("search failed: %w", err)
 	}
 
-	if result.Total == 0 {
+	type searchMatch struct {
+		Username string `json:"username"`
+		Text     string `json:"text"`
+		TS       string `json:"ts"`
+		Channel  struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"channel"`
+	}
+	var result struct {
+		Messages struct {
+			Total   int           `json:"total"`
+			Matches []searchMatch `json:"matches"`
+			Paging  struct {
+				Page  int `json:"page"`
+				Pages int `json:"pages"`
+			} `json:"paging"`
+		} `json:"messages"`
+	}
+	if err := json.Unmarshal(resp.Raw, &result); err != nil {
+		return fmt.Errorf("decode search result: %w", err)
+	}
+
+	if result.Messages.Total == 0 {
 		fmt.Fprintln(ios.Out, "No messages found.")
 		return nil
 	}
 
 	if opts.json.WantsJSON() {
-		return opts.json.OutputJSON(ios.Out, result.Matches)
+		return opts.json.OutputJSON(ios.Out, result.Messages.Matches)
 	}
 
 	teamID, _ := auth.GetTeamInfo()
 
-	fmt.Fprintf(ios.Out, "%s results for %q\n\n", cs.Bold(fmt.Sprintf("%d", result.Total)), opts.query)
+	fmt.Fprintf(ios.Out, "%s results for %q\n\n", cs.Bold(fmt.Sprintf("%d", result.Messages.Total)), opts.query)
 
-	for _, match := range result.Matches {
-		ts := parseSlackTimestamp(match.Timestamp)
+	for _, match := range result.Messages.Matches {
+		ts := parseSlackTimestamp(match.TS)
 		timeStr := text.RelativeTime(ts)
 
 		channelName := match.Channel.Name
@@ -148,7 +172,7 @@ func searchRun(opts *searchOptions) error {
 
 		msgText := text.FormatSlackText(match.Text)
 
-		deeplink := text.SlackDeeplink(teamID, match.Channel.ID, text.FormatMessageTS(match.Timestamp), "")
+		deeplink := text.SlackDeeplink(teamID, match.Channel.ID, text.FormatMessageTS(match.TS), "")
 		channelDisplay := "#" + channelName
 		if deeplink != "" {
 			channelDisplay = text.Hyperlink(deeplink, channelDisplay)
@@ -163,10 +187,10 @@ func searchRun(opts *searchOptions) error {
 	}
 
 	// Pagination footer
-	if result.Paging.Pages > 1 {
+	if result.Messages.Paging.Pages > 1 {
 		fmt.Fprintf(ios.Out, "%s\n",
 			cs.Gray(fmt.Sprintf("Page %d of %d (%d total results) — use --page %d to see more",
-				result.Paging.Page, result.Paging.Pages, result.Total, result.Paging.Page+1)))
+				result.Messages.Paging.Page, result.Messages.Paging.Pages, result.Messages.Total, result.Messages.Paging.Page+1)))
 	}
 
 	// Quick actions footer

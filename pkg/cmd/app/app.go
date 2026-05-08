@@ -1,3 +1,5 @@
+//go:generate go run ../../../cmd/gen-manifest -spec ../../../api/specs/slack_web.json -cmd-root ../../../pkg/cmd -out manifest.go
+
 package app
 
 import (
@@ -14,6 +16,7 @@ func NewCmdApp(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.AddCommand(NewCmdCreate(f))
+	cmd.AddCommand(NewCmdUpdate(f))
 
 	return cmd
 }

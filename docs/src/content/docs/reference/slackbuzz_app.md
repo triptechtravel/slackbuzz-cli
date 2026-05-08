@@ -21,4 +21,5 @@ Create and configure the Slack app used by this CLI.
 
 * [slackbuzz](/slackbuzz-cli/reference/slackbuzz/)	 - Slack CLI - message, search, and manage channels from the command line
 * [slackbuzz app create](/slackbuzz-cli/reference/slackbuzz_app_create/)	 - Create a new Slack app with required scopes
+* [slackbuzz app update](/slackbuzz-cli/reference/slackbuzz_app_update/)	 - Push the latest scope manifest and re-authenticate
 

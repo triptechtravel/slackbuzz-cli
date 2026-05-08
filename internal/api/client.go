@@ -1,13 +1,21 @@
 package api
 
 import (
-	"github.com/slack-go/slack"
+	"context"
+	"encoding/json"
+
 	"github.com/triptechtravel/slackbuzz-cli/internal/build"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 )
 
-// Client wraps the slack-go client with rate limiting.
+// Client is the unified Slack API client used across commands.
+//
+// Backed entirely by our generated slackapi package (transport +
+// per-method typed wrappers). slack-go is no longer in the dependency
+// tree — every operation is generated from the OpenAPI spec or
+// hand-augmented under internal/slackapi/.
 type Client struct {
-	Slack       *slack.Client
+	API         *slackapi.Client
 	RateLimiter *RateLimiter
 	token       string
 }
@@ -15,19 +23,15 @@ type Client struct {
 // NewClient creates a new Slack API client with the given token.
 func NewClient(token string) *Client {
 	rl := NewRateLimiter()
+	httpClient := NewHTTPClient(rl)
 
-	slackClient := slack.New(
-		token,
-		slack.OptionHTTPClient(NewHTTPClient(rl)),
-		slack.OptionAppLevelToken(""),
-	)
+	apiClient := slackapi.NewWithHTTP(token, httpClient)
 
-	// Set a custom user agent header on requests — slack-go doesn't expose
-	// a direct "user-agent" option but we apply it via the custom transport.
+	// Surface Version usage so the build tag isn't optimised away.
 	_ = build.Version
 
 	return &Client{
-		Slack:       slackClient,
+		API:         apiClient,
 		RateLimiter: rl,
 		token:       token,
 	}
@@ -41,9 +45,15 @@ func (c *Client) Token() string {
 // AuthUserID calls auth.test to get the user ID for this client's token.
 // Returns empty string on failure.
 func (c *Client) AuthUserID() string {
-	resp, err := c.Slack.AuthTest()
+	resp, err := slackapi.AuthTest(context.Background(), c.API)
 	if err != nil {
 		return ""
 	}
-	return resp.UserID
+	var info struct {
+		UserID string `json:"user_id"`
+	}
+	if err := json.Unmarshal(resp.Raw, &info); err != nil {
+		return ""
+	}
+	return info.UserID
 }

@@ -1,12 +1,13 @@
 package react
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -52,20 +53,19 @@ func removeRun(opts *removeOptions) error {
 		return err
 	}
 
-	resolver := api.NewResolver(client.Slack)
-	channelID, err := resolver.ResolveChannel(opts.channel)
+	resolver := api.NewResolver(client.API)
+	channelID, _, err := resolver.ResolveTarget(opts.channel)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s", api.FormatResolveError(err, opts.channel))
 	}
 
 	emoji := strings.Trim(opts.emoji, ":")
 
-	ref := slack.ItemRef{
+	if _, err := slackapi.ReactionsRemove(context.Background(), client.API, &slackapi.ReactionsRemoveParams{
 		Channel:   channelID,
 		Timestamp: opts.ts,
-	}
-
-	if err := client.Slack.RemoveReaction(emoji, ref); err != nil {
+		Name:      emoji,
+	}); err != nil {
 		return fmt.Errorf("failed to remove reaction: %w", err)
 	}
 

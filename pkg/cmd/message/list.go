@@ -1,14 +1,16 @@
 package message
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
 	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
+	"github.com/triptechtravel/slackbuzz-cli/internal/recent"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/internal/text"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
@@ -27,13 +29,18 @@ func NewCmdList(f *cmdutil.Factory) *cobra.Command {
 	opts := &listOptions{factory: f}
 
 	cmd := &cobra.Command{
-		Use:   "list <channel>",
-		Short: "List messages in a channel",
-		Long: `Read message history from a Slack channel or thread.
+		Use:   "list <channel-or-user>",
+		Short: "List messages in a channel or DM",
+		Long: `Read message history from a Slack channel, DM, or thread.
 
-The channel argument accepts #channel-name or a channel ID.`,
-		Example: `  # List recent messages
+The argument accepts:
+  #channel-name or channel ID — read channel history
+  @user, user ID, or bare username — read DM history (auto-opens the DM conversation)`,
+		Example: `  # List recent messages in a channel
   slackbuzz message list #general
+
+  # List recent DM history with a user
+  slackbuzz message list @alice
 
   # List with limit
   slackbuzz message list #general --limit 20
@@ -66,38 +73,61 @@ func listRun(opts *listOptions) error {
 	ios := opts.factory.IOStreams
 	cs := ios.ColorScheme()
 
-	client, err := opts.factory.DefaultClient()
-	if err != nil {
-		return err
+	// DM reads need the user token both for resolution (so conversations.open
+	// returns the *user's* DM channel, not the bot's separate one) and for
+	// history (the bot isn't a member of the user's 1:1s). For channels, the
+	// default (bot-first) client is fine.
+	var client *api.Client
+	useUserClient := api.LooksLikeUser(opts.channel)
+	if useUserClient {
+		uc, err := opts.factory.UserClient()
+		if err != nil {
+			return err
+		}
+		client = uc
+	} else {
+		c, err := opts.factory.DefaultClient()
+		if err != nil {
+			return err
+		}
+		client = c
 	}
 
-	resolver := api.NewResolver(client.Slack)
+	resolver := api.NewResolver(client.API)
 
-	channelID, err := resolver.ResolveChannel(opts.channel)
+	// Resolve target to a channel ID — auto-detect DMs vs channels.
+	channelID, isDM, err := resolver.ResolveTarget(opts.channel)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s", api.FormatResolveError(err, opts.channel))
 	}
 
-	var messages []slack.Message
+	// Record the target as a recent context default. The slot we write to
+	// depends on whether this was a DM or a channel — `slackbuzz dm` (no
+	// args) reads "dm"; future `slackbuzz channel` defaults could use "channel".
+	slot := "channel"
+	if isDM {
+		slot = "dm"
+	}
+	_ = recent.Push(slot, opts.channel)
+
+	var messages []*slackapi.Message
+	ctx := context.Background()
 
 	if opts.threadTS != "" {
-		// Fetch thread replies
-		msgs, _, _, err := client.Slack.GetConversationReplies(&slack.GetConversationRepliesParameters{
-			ChannelID: channelID,
-			Timestamp: opts.threadTS,
-			Limit:     opts.limit,
+		resp, err := slackapi.ConversationsReplies(ctx, client.API, &slackapi.ConversationsRepliesParams{
+			Channel: channelID,
+			TS:      opts.threadTS,
+			Limit:   opts.limit,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to get thread replies: %w", err)
 		}
-		messages = msgs
+		messages = resp.Messages
 	} else {
-		// Fetch channel history
-		params := &slack.GetConversationHistoryParameters{
-			ChannelID: channelID,
-			Limit:     opts.limit,
+		params := &slackapi.ConversationsHistoryParams{
+			Channel: channelID,
+			Limit:   opts.limit,
 		}
-
 		if opts.since != "" {
 			sinceTime, parseErr := time.Parse("2006-01-02", opts.since)
 			if parseErr != nil {
@@ -106,7 +136,7 @@ func listRun(opts *listOptions) error {
 			params.Oldest = fmt.Sprintf("%d.000000", sinceTime.Unix())
 		}
 
-		resp, err := client.Slack.GetConversationHistory(params)
+		resp, err := slackapi.ConversationsHistory(ctx, client.API, params)
 		if err != nil {
 			return fmt.Errorf("failed to get channel history: %w", err)
 		}
@@ -127,7 +157,7 @@ func listRun(opts *listOptions) error {
 	// Print messages in reverse order (oldest first)
 	for i := len(messages) - 1; i >= 0; i-- {
 		msg := messages[i]
-		ts := parseSlackTimestamp(msg.Timestamp)
+		ts := parseSlackTimestamp(msg.TS)
 		user := msg.User
 		if user == "" {
 			user = msg.BotID
@@ -139,10 +169,10 @@ func listRun(opts *listOptions) error {
 		timeStr := text.RelativeTime(ts)
 		msgText := text.FormatSlackText(msg.Text)
 
-		deeplink := text.SlackDeeplink(teamID, channelID, text.FormatMessageTS(msg.Timestamp), "")
-		tsDisplay := msg.Timestamp
+		deeplink := text.SlackDeeplink(teamID, channelID, text.FormatMessageTS(msg.TS), "")
+		tsDisplay := msg.TS
 		if deeplink != "" {
-			tsDisplay = text.Hyperlink(deeplink, msg.Timestamp)
+			tsDisplay = text.Hyperlink(deeplink, msg.TS)
 		}
 
 		fmt.Fprintf(ios.Out, "%s  %s  %s\n",

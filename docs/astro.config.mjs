@@ -58,6 +58,7 @@ export default defineConfig({
         {
           label: 'Project',
           items: [
+            { label: 'Architecture', slug: 'architecture' },
             { label: 'Contributing', slug: 'contributing' },
             { label: 'Security', slug: 'security' },
           ],

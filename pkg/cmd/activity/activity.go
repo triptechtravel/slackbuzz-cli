@@ -1,16 +1,18 @@
 package activity
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
 	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/internal/text"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
@@ -257,19 +259,38 @@ func buildQuery(base string, opts *activityOptions, afterDate string) string {
 }
 
 func searchActivity(client *api.Client, query, activityType string, limit int) ([]activityItem, error) {
-	params := slack.SearchParameters{
-		Sort:          "timestamp",
-		SortDirection: "desc",
-		Count:         limit,
-	}
-
-	result, err := client.Slack.SearchMessages(query, params)
+	resp, err := slackapi.SearchMessages(context.Background(), client.API, &slackapi.SearchMessagesParams{
+		Query:   query,
+		Sort:    "timestamp",
+		SortDir: "desc",
+		Count:   limit,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("search failed: %w", err)
 	}
 
-	items := make([]activityItem, 0, len(result.Matches))
-	for _, match := range result.Matches {
+	type searchMatch struct {
+		Username  string `json:"username"`
+		User      string `json:"user"`
+		Text      string `json:"text"`
+		TS        string `json:"ts"`
+		Permalink string `json:"permalink"`
+		Channel   struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"channel"`
+	}
+	var searchResult struct {
+		Messages struct {
+			Matches []searchMatch `json:"matches"`
+		} `json:"messages"`
+	}
+	if err := json.Unmarshal(resp.Raw, &searchResult); err != nil {
+		return nil, fmt.Errorf("decode search result: %w", err)
+	}
+
+	items := make([]activityItem, 0, len(searchResult.Messages.Matches))
+	for _, match := range searchResult.Messages.Matches {
 		channelName := match.Channel.Name
 		if channelName == "" {
 			channelName = match.Channel.ID
@@ -281,7 +302,7 @@ func searchActivity(client *api.Client, query, activityType string, limit int) (
 			Channel:   channelName,
 			ChannelID: match.Channel.ID,
 			Text:      match.Text,
-			Timestamp: match.Timestamp,
+			Timestamp: match.TS,
 			Permalink: match.Permalink,
 			Hints:     ExtractHints(match.Text),
 		}
@@ -360,16 +381,30 @@ func ParseSlackTimestamp(ts string) time.Time {
 // enrichReactions fetches reactions for each activity item using the bot client.
 // Failures are silently ignored per-item.
 func enrichReactions(botClient *api.Client, items []activityItem) {
+	ctx := context.Background()
 	for i := range items {
 		if items[i].ChannelID == "" || items[i].Timestamp == "" {
 			continue
 		}
-		ref := slack.NewRefToMessage(items[i].ChannelID, items[i].Timestamp)
-		reactions, err := botClient.Slack.GetReactions(ref, slack.NewGetReactionsParameters())
+		resp, err := slackapi.ReactionsGet(ctx, botClient.API, &slackapi.ReactionsGetParams{
+			Channel:   items[i].ChannelID,
+			Timestamp: items[i].Timestamp,
+		})
 		if err != nil {
 			continue
 		}
-		for _, r := range reactions {
+		var rg struct {
+			Message struct {
+				Reactions []struct {
+					Name  string `json:"name"`
+					Count int    `json:"count"`
+				} `json:"reactions"`
+			} `json:"message"`
+		}
+		if err := json.Unmarshal(resp.Raw, &rg); err != nil {
+			continue
+		}
+		for _, r := range rg.Message.Reactions {
 			items[i].Reactions = append(items[i].Reactions, Reaction{
 				Name:  r.Name,
 				Count: r.Count,

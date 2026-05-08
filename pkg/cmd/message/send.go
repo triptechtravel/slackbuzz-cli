@@ -2,13 +2,15 @@ package message
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"strings"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
+	"github.com/triptechtravel/slackbuzz-cli/internal/recent"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	slacktext "github.com/triptechtravel/slackbuzz-cli/internal/text"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
@@ -106,7 +108,7 @@ func sendRun(opts *sendOptions) error {
 		return err
 	}
 
-	resolver := api.NewResolver(client.Slack)
+	resolver := api.NewResolver(client.API)
 
 	// Resolve target to a channel ID — auto-detect DMs vs channels.
 	// ResolveTarget handles bare names by trying user (DM) first, then channel.
@@ -118,7 +120,7 @@ func sendRun(opts *sendOptions) error {
 		botClient, botErr := opts.factory.BotClient()
 		if botErr == nil {
 			fmt.Fprintf(ios.ErrOut, "%s User token missing scope for channel lookup — falling back to bot token\n", cs.Yellow("!"))
-			botResolver := api.NewResolver(botClient.Slack)
+			botResolver := api.NewResolver(botClient.API)
 			channelID, _, err = botResolver.ResolveTarget(opts.channel)
 		}
 	}
@@ -134,7 +136,7 @@ func sendRun(opts *sendOptions) error {
 		selfID := client.AuthUserID()
 		if targetID != "" && selfID != "" && targetID == selfID {
 			if botClient, botErr := opts.factory.BotClient(); botErr == nil {
-				botResolver := api.NewResolver(botClient.Slack)
+				botResolver := api.NewResolver(botClient.API)
 				if botChannelID, botErr := botResolver.ResolveDM(opts.channel); botErr == nil {
 					client = botClient
 					channelID = botChannelID
@@ -197,26 +199,30 @@ func sendRun(opts *sendOptions) error {
 		}
 	}
 
-	// Build message options
-	var msgOpts []slack.MsgOption
-	if opts.blocks {
-		blocks := buildMrkdwnBlocks(text)
-		msgOpts = append(msgOpts,
-			slack.MsgOptionText(text, false), // fallback for notifications/previews
-			slack.MsgOptionBlocks(blocks...),
-		)
-	} else {
-		msgOpts = append(msgOpts, slack.MsgOptionText(text, false))
+	// Build chat.postMessage params.
+	postParams := &slackapi.ChatPostMessageParams{
+		Channel:  channelID,
+		Text:     text, // also serves as fallback for notifications/previews when blocks are set
+		ThreadTS: opts.threadTS,
 	}
-	if opts.threadTS != "" {
-		msgOpts = append(msgOpts, slack.MsgOptionTS(opts.threadTS))
+	if opts.blocks {
+		postParams.Blocks = slackapi.BlocksJSON(buildMrkdwnBlocks(text))
 	}
 
 	// Post the message
-	respChannel, respTS, err := client.Slack.PostMessage(channelID, msgOpts...)
+	resp, err := slackapi.ChatPostMessage(context.Background(), client.API, postParams)
 	if err != nil {
 		return fmt.Errorf("%s", api.FormatSendError(err, opts.channel))
 	}
+	respChannel := resp.Channel
+	respTS := resp.TS
+
+	// Record the target for recent-context defaults (slackbuzz dm / send).
+	slot := "send"
+	if api.LooksLikeUser(opts.channel) {
+		slot = "dm"
+	}
+	_ = recent.Push(slot, opts.channel)
 
 	if opts.json.WantsJSON() {
 		result := map[string]string{
@@ -263,12 +269,12 @@ const maxBlockTextLen = 3000
 // buildMrkdwnBlocks splits message text into Block Kit section blocks with
 // mrkdwn type. Long messages are split at paragraph boundaries to stay within
 // Slack's 3000-character-per-block limit.
-func buildMrkdwnBlocks(text string) []slack.Block {
+func buildMrkdwnBlocks(text string) []slackapi.Block {
 	chunks := splitForBlocks(text, maxBlockTextLen)
-	blocks := make([]slack.Block, 0, len(chunks))
+	blocks := make([]slackapi.Block, 0, len(chunks))
 	for _, chunk := range chunks {
-		body := slack.NewTextBlockObject("mrkdwn", chunk, false, false)
-		blocks = append(blocks, slack.NewSectionBlock(body, nil, nil))
+		body := slackapi.NewMrkdwnText(chunk)
+		blocks = append(blocks, slackapi.NewSectionBlock(body, nil, nil))
 	}
 	return blocks
 }

@@ -12,11 +12,12 @@ type AuthConfig struct {
 	BotToken    string `yaml:"bot_token,omitempty"`
 	UserToken   string `yaml:"user_token,omitempty"`
 	ConfigToken string `yaml:"config_token,omitempty"` // App configuration token for manifest API
+	AppID       string `yaml:"app_id,omitempty"`       // Slack app ID, set after `app create`
 	TeamID      string `yaml:"team_id,omitempty"`
 	TeamName    string `yaml:"team_name,omitempty"`
-	UserID      string `yaml:"user_id,omitempty"`      // Human user ID (from user token)
-	UserName    string `yaml:"user_name,omitempty"`    // Human username (from user token)
-	BotUserID   string `yaml:"bot_user_id,omitempty"`  // Bot user ID (from bot token)
+	UserID      string `yaml:"user_id,omitempty"`       // Human user ID (from user token)
+	UserName    string `yaml:"user_name,omitempty"`     // Human username (from user token)
+	BotUserID   string `yaml:"bot_user_id,omitempty"`   // Bot user ID (from bot token)
 	BotUserName string `yaml:"bot_user_name,omitempty"` // Bot username (from bot token)
 }
 

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 )
 
 // AuthExpiredError indicates the token has been revoked or expired (401 response).
@@ -25,28 +27,38 @@ func IsAuthExpired(err error) bool {
 	return errors.As(err, &ae)
 }
 
-// IsAuthRelatedSlackError returns true if the Slack API error string indicates
-// an authentication problem (invalid_auth, token_revoked, account_inactive, not_authed).
+// IsAuthRelatedSlackError returns true if the given Slack API error code
+// indicates an authentication problem. Uses the typed code constants from
+// the slackapi package so codes can't drift between definitions.
 func IsAuthRelatedSlackError(slackErr string) bool {
 	switch slackErr {
-	case "invalid_auth", "token_revoked", "account_inactive", "not_authed":
+	case slackapi.CodeInvalidAuth,
+		slackapi.CodeTokenRevoked,
+		slackapi.CodeAccountInactive,
+		slackapi.CodeNotAuthed:
 		return true
 	}
 	return false
 }
 
-// IsMissingScopeError checks if an error is (or wraps) a Slack "missing_scope" error.
+// IsMissingScopeError reports whether err is (or wraps) Slack's
+// missing_scope response. Uses errors.Is against the typed sentinel
+// rather than string-matching the formatted error text — the sentinel
+// matches by Code regardless of how Error() formats.
 func IsMissingScopeError(err error) bool {
-	if err == nil {
-		return false
-	}
-	// Walk the error chain
-	for e := err; e != nil; e = errors.Unwrap(e) {
-		if e.Error() == "missing_scope" {
-			return true
-		}
-	}
-	return strings.Contains(err.Error(), "missing_scope")
+	return errors.Is(err, slackapi.ErrMissingScope)
+}
+
+// IsChannelNotFoundError reports whether err is (or wraps) Slack's
+// channel_not_found response.
+func IsChannelNotFoundError(err error) bool {
+	return errors.Is(err, slackapi.ErrChannelNotFound)
+}
+
+// IsRateLimitedError reports whether err is (or wraps) Slack's
+// ratelimited response.
+func IsRateLimitedError(err error) bool {
+	return errors.Is(err, slackapi.ErrRatelimited)
 }
 
 // SlackErrorMessage maps Slack API error codes to user-friendly messages.
@@ -86,12 +98,27 @@ func FormatResolveError(err error, target string) string {
 			"Channel resolution for %q failed: missing_scope (likely channels:read).\n"+
 				"  Fix: Re-install your Slack app with updated scopes, or run:\n"+
 				"    slackbuzz app create   (creates app with correct scopes)\n"+
+				"    slackbuzz app update   (updates an existing app's scopes)\n"+
 				"  Workaround: slackbuzz send --as-bot %s <text>",
 			target, target,
 		)
 	}
 
+	if code := slackCode(err); code != "" {
+		return fmt.Sprintf("failed to resolve %q: %s", target, code)
+	}
 	return fmt.Sprintf("failed to resolve %q: %s", target, err.Error())
+}
+
+// slackCode pulls Slack's machine-readable error code out of err. Returns
+// "" when the error isn't from a slackapi call. Used by every formatter
+// here so we look up canned messages by code, never by formatted text.
+func slackCode(err error) string {
+	var apiErr *slackapi.APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.Code
+	}
+	return ""
 }
 
 // FormatError converts a Slack API error to a user-friendly message.
@@ -99,18 +126,22 @@ func FormatError(err error) string {
 	if err == nil {
 		return ""
 	}
-	return SlackErrorMessage(err.Error())
+	if code := slackCode(err); code != "" {
+		return SlackErrorMessage(code)
+	}
+	return err.Error()
 }
 
-// FormatSendError produces a context-aware error message for message send failures.
-// The target is the original channel/user argument from the command.
+// FormatSendError produces a context-aware error message for message
+// send failures. The target is the original channel/user argument from
+// the command. Falls back to the generic formatter for non-slackapi
+// errors.
 func FormatSendError(err error, target string) string {
 	if err == nil {
 		return ""
 	}
-	errStr := err.Error()
 
-	if errStr == "missing_scope" {
+	if IsMissingScopeError(err) {
 		isDM := strings.HasPrefix(target, "@") || isUserID(target) ||
 			(!strings.HasPrefix(target, "#") && !isChannelID(target))
 		if isDM {
@@ -121,6 +152,9 @@ func FormatSendError(err error, target string) string {
 			"  Check scopes at api.slack.com/apps > OAuth & Permissions"
 	}
 
-	return SlackErrorMessage(errStr)
+	if code := slackCode(err); code != "" {
+		return SlackErrorMessage(code)
+	}
+	return err.Error()
 }
 

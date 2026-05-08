@@ -1,9 +1,11 @@
 package user
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/internal/tableprinter"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
@@ -53,9 +55,21 @@ func listRun(opts *listOptions) error {
 		return err
 	}
 
-	users, err := client.Slack.GetUsers()
-	if err != nil {
-		return fmt.Errorf("failed to list users: %w", err)
+	var users []*slackapi.User
+	cursor := ""
+	for {
+		resp, err := slackapi.UsersList(context.Background(), client.API, &slackapi.UsersListParams{
+			Limit:  1000,
+			Cursor: cursor,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to list users: %w", err)
+		}
+		users = append(users, resp.Members...)
+		if resp.ResponseMetadata.NextCursor == "" {
+			break
+		}
+		cursor = resp.ResponseMetadata.NextCursor
 	}
 
 	type userRow struct {
@@ -70,21 +84,24 @@ func listRun(opts *listOptions) error {
 
 	var rows []userRow
 	for _, u := range users {
-		if u.IsBot || u.ID == "USLACKBOT" {
+		if u == nil || u.IsBot || u.ID == "USLACKBOT" {
 			continue
 		}
 		if u.Deleted && !opts.includeDeactivated {
 			continue
 		}
-		rows = append(rows, userRow{
-			ID:          u.ID,
-			Name:        u.Name,
-			RealName:    u.RealName,
-			DisplayName: u.Profile.DisplayName,
-			Email:       u.Profile.Email,
-			IsBot:       u.IsBot,
-			Deleted:     u.Deleted,
-		})
+		row := userRow{
+			ID:       u.ID,
+			Name:     u.Name,
+			RealName: u.RealName,
+			IsBot:    u.IsBot,
+			Deleted:  u.Deleted,
+		}
+		if u.Profile != nil {
+			row.DisplayName = u.Profile.DisplayName
+			row.Email = u.Profile.Email
+		}
+		rows = append(rows, row)
 		if len(rows) >= opts.limit {
 			break
 		}

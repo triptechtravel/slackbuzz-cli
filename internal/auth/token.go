@@ -1,41 +1,54 @@
 package auth
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/slack-go/slack"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 )
 
 // TokenInfo holds the result of validating a token via auth.test.
 type TokenInfo struct {
-	UserID   string
-	User     string
-	TeamID   string
-	Team     string
-	BotID    string
-	IsBot    bool
+	UserID string
+	User   string
+	TeamID string
+	Team   string
+	BotID  string
+	IsBot  bool
 }
 
 // ValidateToken checks that a token is valid by calling Slack's auth.test.
 func ValidateToken(token string) (*TokenInfo, error) {
-	client := slack.New(token)
+	client := slackapi.New(token)
 
-	resp, err := client.AuthTest()
+	resp, err := slackapi.AuthTest(context.Background(), client)
 	if err != nil {
 		return nil, fmt.Errorf("token validation failed: %w", err)
 	}
 
+	var raw struct {
+		UserID string `json:"user_id"`
+		User   string `json:"user"`
+		TeamID string `json:"team_id"`
+		Team   string `json:"team"`
+		BotID  string `json:"bot_id"`
+	}
+	if err := json.Unmarshal(resp.Raw, &raw); err != nil {
+		return nil, fmt.Errorf("decode auth.test: %w", err)
+	}
+
 	info := &TokenInfo{
-		UserID: resp.UserID,
-		User:   resp.User,
-		TeamID: resp.TeamID,
-		Team:   resp.Team,
-		BotID:  resp.BotID,
+		UserID: raw.UserID,
+		User:   raw.User,
+		TeamID: raw.TeamID,
+		Team:   raw.Team,
+		BotID:  raw.BotID,
 	}
 
 	// Bot tokens start with xoxb- and have a BotID
-	info.IsBot = strings.HasPrefix(token, "xoxb-") || resp.BotID != ""
+	info.IsBot = strings.HasPrefix(token, "xoxb-") || raw.BotID != ""
 
 	return info, nil
 }

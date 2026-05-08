@@ -9,11 +9,18 @@ Direct message management
 
 ### Synopsis
 
-List DM conversations with recent activity.
+Direct-message management.
 
 Reading and sending individual DMs works via:
   slackbuzz message list @user
   slackbuzz message send @user "text"
+
+Running `slackbuzz dm` with no subcommand opens the most recent DM
+conversation (per the local recents file).
+
+```
+slackbuzz dm [<user>] [flags]
+```
 
 ### Options
 

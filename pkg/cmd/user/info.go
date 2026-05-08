@@ -1,10 +1,12 @@
 package user
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -48,22 +50,37 @@ func infoRun(opts *infoOptions) error {
 		return err
 	}
 
-	resolver := api.NewResolver(client.Slack)
+	resolver := api.NewResolver(client.API)
 	userID, err := resolver.ResolveUser(opts.user)
 	if err != nil {
 		return err
 	}
 
-	user, err := client.Slack.GetUserInfo(userID)
+	resp, err := slackapi.UsersInfo(context.Background(), client.API, &slackapi.UsersInfoParams{
+		User: userID,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to get user info: %w", err)
 	}
+	if resp.User == nil {
+		return fmt.Errorf("user %s not found", userID)
+	}
+	user := resp.User
 
 	if opts.json.WantsJSON() {
 		return opts.json.OutputJSON(ios.Out, user)
 	}
 
-	displayName := user.Profile.DisplayName
+	var (
+		displayName, email, title, statusText, statusEmoji string
+	)
+	if user.Profile != nil {
+		displayName = user.Profile.DisplayName
+		email = user.Profile.Email
+		title = user.Profile.Title
+		statusText = user.Profile.StatusText
+		statusEmoji = user.Profile.StatusEmoji
+	}
 	if displayName == "" {
 		displayName = user.RealName
 	}
@@ -72,14 +89,14 @@ func infoRun(opts *infoOptions) error {
 	fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("ID:"), user.ID)
 	fmt.Fprintf(ios.Out, "  %-16s @%s\n", cs.Bold("Username:"), user.Name)
 	fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("Real name:"), user.RealName)
-	if user.Profile.Email != "" {
-		fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("Email:"), user.Profile.Email)
+	if email != "" {
+		fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("Email:"), email)
 	}
-	if user.Profile.Title != "" {
-		fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("Title:"), user.Profile.Title)
+	if title != "" {
+		fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("Title:"), title)
 	}
-	if user.Profile.StatusText != "" {
-		fmt.Fprintf(ios.Out, "  %-16s %s %s\n", cs.Bold("Status:"), user.Profile.StatusEmoji, user.Profile.StatusText)
+	if statusText != "" {
+		fmt.Fprintf(ios.Out, "  %-16s %s %s\n", cs.Bold("Status:"), statusEmoji, statusText)
 	}
 	fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("Timezone:"), user.TZ)
 

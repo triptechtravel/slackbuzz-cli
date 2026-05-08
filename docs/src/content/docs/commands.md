@@ -28,6 +28,47 @@ The CLI automatically picks the correct token (bot or user) for each command. Yo
 
 **Override:** Pass `--as-bot` on `message send`, `edit`, or `delete` to post as the bot app instead of the user.
 
+## Fuzzy resolution
+
+Channel and user names match in three tiers, in order:
+
+1. **Exact** (case-insensitive). `@michelle` → @michelle.
+2. **Substring** (case-insensitive). `@mich` → @michelle, `#stand` → #stand-up. Multiple matches resolve to the shortest (most-specific) candidate.
+3. **Fuzzy** (edit-distance ranked). `#stnd-up` → #stand-up. Used for channels only; *never* for users — typing the wrong handle and DM-ing the wrong person is worse than rejecting the input.
+
+When no match is found, the error includes the closest candidates:
+
+```
+$ slackbuzz message list #engineerin
+Error: channel "engineerin" not found. Did you mean: engineering, engagement-engineering, ai-engineering?
+```
+
+## Recent context
+
+slackbuzz tracks recently-used targets per command type in `~/.config/slack/recent.json`. Each `message list`, `message send`, and `notify` invocation appends its target to a per-slot list (`dm`, `channel`, `send`). Bounded to 16 entries per slot, deduplicated, newest-first.
+
+Running `slackbuzz dm` with no subcommand prints the recent DM list and the commands to read/send the most recent thread:
+
+```
+$ slackbuzz dm
+Recent DMs (newest first)
+  @michelle               2 minutes ago
+  @herman                 3 hours ago
+  @daisy                  yesterday
+
+Read: slackbuzz message list @michelle
+Send: slackbuzz message send @michelle "text"
+```
+
+## Bulk argument helpers
+
+Commands that take repeated positional arguments (e.g. multiple message timestamps) handle the common shell-splitting issues automatically. Both forms work:
+
+```sh
+slackbuzz react remove '#general' 1706000000.000001 1706000000.000002
+slackbuzz react remove '#general' "$TS_LIST"   # word-split inside one arg also works
+```
+
 ---
 
 ## activity

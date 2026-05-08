@@ -1,11 +1,12 @@
 package doctor
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -63,9 +64,9 @@ func doctorRun(f *cmdutil.Factory) error {
 		})
 
 		// Probe channels:read with bot token
-		botClient := slack.New(botToken)
-		_, _, err := botClient.GetConversations(&slack.GetConversationsParameters{
-			Types: []string{"public_channel"},
+		botClient := slackapi.New(botToken)
+		_, err := slackapi.ConversationsList(context.Background(), botClient, &slackapi.ConversationsListParams{
+			Types: "public_channel",
 			Limit: 1,
 		})
 		if err != nil {
@@ -103,9 +104,9 @@ func doctorRun(f *cmdutil.Factory) error {
 		})
 
 		// Probe conversation scopes with user token (matches resolver's query)
-		userClient := slack.New(userToken)
-		_, _, err := userClient.GetConversations(&slack.GetConversationsParameters{
-			Types: []string{"public_channel", "private_channel", "im", "mpim"},
+		userClient := slackapi.New(userToken)
+		_, err := slackapi.ConversationsList(context.Background(), userClient, &slackapi.ConversationsListParams{
+			Types: "public_channel,private_channel,im,mpim",
 			Limit: 1,
 		})
 		if err != nil {

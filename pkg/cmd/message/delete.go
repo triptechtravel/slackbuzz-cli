@@ -1,11 +1,13 @@
 package message
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
 	"github.com/triptechtravel/slackbuzz-cli/internal/prompter"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -65,11 +67,11 @@ func deleteRun(opts *deleteOptions) error {
 		return err
 	}
 
-	resolver := api.NewResolver(client.Slack)
+	resolver := api.NewResolver(client.API)
 
-	channelID, err := resolver.ResolveChannel(opts.channel)
+	channelID, _, err := resolver.ResolveTarget(opts.channel)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s", api.FormatResolveError(err, opts.channel))
 	}
 
 	if !opts.confirm {
@@ -88,8 +90,10 @@ func deleteRun(opts *deleteOptions) error {
 		}
 	}
 
-	_, _, err = client.Slack.DeleteMessage(channelID, opts.ts)
-	if err != nil {
+	if _, err := slackapi.ChatDelete(context.Background(), client.API, &slackapi.ChatDeleteParams{
+		Channel: channelID,
+		TS:      opts.ts,
+	}); err != nil {
 		return fmt.Errorf("%s", api.FormatError(err))
 	}
 

@@ -18,10 +18,19 @@ Use the `slackbuzz` CLI instead of raw Slack API calls. It handles authenticatio
 ## Authentication
 
 ```bash
-slackbuzz app create     # Create Slack app with required scopes
-slackbuzz auth login     # Log in with bot and/or user token
+slackbuzz app create     # Create a new Slack app with the required scopes
+slackbuzz app update     # Push the latest scope set to an existing app + re-auth
+slackbuzz auth login     # Log in with bot and/or user token (manual paste)
 slackbuzz auth status    # Check auth status and capabilities
 ```
+
+**`app update` flow** — use when slackbuzz gains new scope requirements
+(e.g. a future command needs a scope the existing manifest doesn't grant).
+Pushes the canonical manifest to your existing app via `apps.manifest.update`,
+opens the install page so you can approve the new scopes, then prompts for
+the regenerated bot + user tokens. The manifest is auto-derived from method
+usage (`make manifest-gen` runs in CI), so the scope list never drifts from
+what commands actually need.
 
 Two token types are required. **The CLI automatically selects the right token for each command — you do not need to specify which to use.**
 
@@ -244,6 +253,25 @@ Unrecognized names are left as-is (no error). Use `slackbuzz user list` to disco
 
 The CLI automatically strips common shell escape artifacts from message text before sending. For example, zsh history expansion can turn exclamation marks into backslash-escaped versions when passed through double-quoted strings. The CLI detects and cleans these so the message arrives correctly in Slack.
 
+## Fuzzy resolution
+
+Channel and user names match in three tiers:
+
+1. **Exact** (case-insensitive). `@michelle` → @michelle.
+2. **Substring**. `@mich` → @michelle, `#stand` → #stand-up. Multiple
+   matches resolve to the shortest (most-specific).
+3. **Fuzzy** (edit distance, channel-only — never used for users to
+   avoid mis-DMing the wrong person). `#stnd-p` → #stand-up.
+
+Failing exact match shows "Did you mean: …?" suggestions in the error.
+
+## Recent context
+
+`slackbuzz dm` with no subcommand shows the most recently active DM
+targets (newest first) and the commands to read/send them. Each
+`message list`, `message send`, `notify` invocation records its target
+into `~/.config/slack/recent.json` so future no-arg defaults flow.
+
 ## Key Behaviors
 
 - **Automatic token selection**: The CLI picks the right token (bot or user) for each command. No need to specify — just run the command. Use `--as-bot` only when explicitly asked to post as the bot.
@@ -299,3 +327,38 @@ slackbuzz doctor
 # Check auth status
 slackbuzz auth status
 ```
+
+## When commands fail with `missing_scope`
+
+slackbuzz surfaces Slack's missing-scope responses with the specific scopes
+needed and a one-line fix:
+
+```
+Error: chat.postMessage: missing_scope (needed scopes: chat:write)
+```
+
+Run `slackbuzz app update` to push the latest scope manifest to your existing
+Slack app and re-auth. The manifest is auto-derived from the methods slackbuzz
+calls, so the scope list is always exactly right — `app update` is the
+canonical fix for any `missing_scope` error.
+
+## Internal architecture (for context)
+
+The CLI is generated from Slack's published OpenAPI 2.0 spec (committed to
+`api/specs/slack_web.json`):
+
+- **`make api-gen`** regenerates the typed Slack client (174 methods).
+- **`make manifest-gen`** AST-walks `pkg/cmd/` for `slackapi.<Method>(...)`
+  calls and writes the corresponding scope union to `pkg/cmd/app/manifest.go`.
+- **`make verify-gen`** runs both and fails CI if generated artifacts have
+  drifted — guarantees the manifest never lies about what the CLI actually
+  needs.
+
+Most surface area is generated; the hand-written pieces are:
+
+- `internal/slackapi/client.go` — transport (`Do`, error envelope, sentinel errors)
+- `internal/slackapi/blocks.go` — Block Kit composition helpers
+- `internal/slackapi/files.go` — multipart `files.upload`
+- `cmd/gen-api/patches.go` — narrow spec-quirk fixups (inline-vs-ref drift, nullable tuples)
+
+See [Architecture](https://triptechtravel.github.io/slackbuzz-cli/architecture/) for the complete design.

@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25"
-      - run: go test ./...
+      - run: go test -race ./...
       - run: go vet ./...
 
   build:
@@ -25,3 +25,40 @@ jobs:
         with:
           go-version: "1.25"
       - run: go build -o /dev/null ./cmd/slackbuzz
+
+  # verify-gen runs the generators and fails if their output doesn't
+  # match what's committed. This catches scope-drift between the
+  # methods commands actually call and the manifest pkg/cmd/app/manifest.go
+  # ships with — the structural guarantee the codegen pipeline is built for.
+  verify-gen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - run: make verify-gen
+
+  # gofmt and golangci-lint catch style / lint issues that go vet doesn't.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: gofmt check
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "Files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          # Keep CI lint surface narrow until the codebase has dedicated
+          # linter sweeps — vet + gofmt cover most regressions, golangci
+          # adds standard staticcheck/gosimple on top.
+          args: --timeout=5m

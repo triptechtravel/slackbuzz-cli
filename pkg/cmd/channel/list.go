@@ -1,10 +1,11 @@
 package channel
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/internal/tableprinter"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
@@ -69,23 +70,24 @@ func listRun(opts *listOptions) error {
 		return fmt.Errorf("invalid channel type %q (use: public, private, im, mpim)", opts.channelType)
 	}
 
-	params := &slack.GetConversationsParameters{
-		Types:           []string{slackType},
+	params := &slackapi.ConversationsListParams{
+		Types:           slackType,
 		Limit:           opts.limit,
 		ExcludeArchived: true,
 	}
 
-	var allChannels []slack.Channel
+	ctx := context.Background()
+	var allChannels []*slackapi.Channel
 	for {
-		channels, nextCursor, err := client.Slack.GetConversations(params)
+		resp, err := slackapi.ConversationsList(ctx, client.API, params)
 		if err != nil {
 			return fmt.Errorf("failed to list channels: %w", err)
 		}
-		allChannels = append(allChannels, channels...)
-		if nextCursor == "" || len(allChannels) >= opts.limit {
+		allChannels = append(allChannels, resp.Channels...)
+		if resp.ResponseMetadata.NextCursor == "" || len(allChannels) >= opts.limit {
 			break
 		}
-		params.Cursor = nextCursor
+		params.Cursor = resp.ResponseMetadata.NextCursor
 	}
 
 	if len(allChannels) > opts.limit {
@@ -110,7 +112,10 @@ func listRun(opts *listOptions) error {
 		}
 		tp.AddField(name)
 		tp.AddField(fmt.Sprintf("%d members", ch.NumMembers))
-		purpose := ch.Purpose.Value
+		var purpose string
+		if ch.Purpose != nil {
+			purpose = ch.Purpose.Value
+		}
 		tp.AddField(cs.Gray(purpose))
 		tp.EndRow()
 	}

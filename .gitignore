@@ -9,3 +9,10 @@ dist/
 docs/node_modules/
 docs/dist/
 docs/.astro/
+.DS_Store
+
+# Stray binaries from `go build` at repo root (we always build into bin/ or via go install)
+/gen-api
+/gen-manifest
+/gen-docs
+/slackbuzz

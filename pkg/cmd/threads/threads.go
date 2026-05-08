@@ -1,11 +1,13 @@
 package threads
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/internal/text"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/activity"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
@@ -91,24 +93,44 @@ func threadsRun(opts *threadsOptions) error {
 		}
 	}
 
-	params := slack.SearchParameters{
-		Sort:          "timestamp",
-		SortDirection: "desc",
-		Count:         opts.limit,
-	}
-
-	result, err := client.Slack.SearchMessages(query, params)
+	resp, err := slackapi.SearchMessages(context.Background(), client.API, &slackapi.SearchMessagesParams{
+		Query:   query,
+		Sort:    "timestamp",
+		SortDir: "desc",
+		Count:   opts.limit,
+	})
 	if err != nil {
 		return fmt.Errorf("search failed: %w", err)
 	}
 
-	if result.Total == 0 {
+	type searchMatch struct {
+		Username  string `json:"username"`
+		User      string `json:"user"`
+		Text      string `json:"text"`
+		TS        string `json:"ts"`
+		Permalink string `json:"permalink"`
+		Channel   struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"channel"`
+	}
+	var searchResult struct {
+		Messages struct {
+			Total   int           `json:"total"`
+			Matches []searchMatch `json:"matches"`
+		} `json:"messages"`
+	}
+	if err := json.Unmarshal(resp.Raw, &searchResult); err != nil {
+		return fmt.Errorf("decode search result: %w", err)
+	}
+
+	if searchResult.Messages.Total == 0 {
 		fmt.Fprintln(ios.Out, "No threads found.")
 		return nil
 	}
 
-	items := make([]threadItem, 0, len(result.Matches))
-	for _, match := range result.Matches {
+	items := make([]threadItem, 0, len(searchResult.Messages.Matches))
+	for _, match := range searchResult.Messages.Matches {
 		channelName := match.Channel.Name
 		if channelName == "" {
 			channelName = match.Channel.ID
@@ -125,7 +147,7 @@ func threadsRun(opts *threadsOptions) error {
 			RootUser:  match.Username,
 			RootText:  match.Text,
 			YourReply: yourReply,
-			Timestamp: match.Timestamp,
+			Timestamp: match.TS,
 			Permalink: match.Permalink,
 			Hints:     activity.ExtractHints(match.Text),
 		}

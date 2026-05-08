@@ -4,19 +4,22 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 )
 
 func TestIsMissingScopeError(t *testing.T) {
+	scopeErr := &slackapi.APIError{Method: "channels.list", Code: slackapi.CodeMissingScope}
 	tests := []struct {
 		name string
 		err  error
 		want bool
 	}{
 		{"nil error", nil, false},
-		{"missing_scope direct", fmt.Errorf("missing_scope"), true},
-		{"wrapped missing_scope", fmt.Errorf("lookup failed: %w", fmt.Errorf("missing_scope")), true},
-		{"contains missing_scope", fmt.Errorf("error: missing_scope for channels:read"), true},
-		{"unrelated error", fmt.Errorf("channel_not_found"), false},
+		{"typed APIError missing_scope", scopeErr, true},
+		{"wrapped APIError missing_scope", fmt.Errorf("lookup failed: %w", scopeErr), true},
+		{"different APIError code", &slackapi.APIError{Code: slackapi.CodeChannelNotFound}, false},
+		{"plain error containing the string", fmt.Errorf("error: missing_scope for channels:read"), false},
 		{"empty error", fmt.Errorf(""), false},
 	}
 
@@ -31,6 +34,8 @@ func TestIsMissingScopeError(t *testing.T) {
 }
 
 func TestFormatResolveError(t *testing.T) {
+	scopeErr := &slackapi.APIError{Method: "channels.list", Code: slackapi.CodeMissingScope}
+	notFoundErr := &slackapi.APIError{Method: "conversations.info", Code: slackapi.CodeChannelNotFound}
 	tests := []struct {
 		name   string
 		err    error
@@ -45,7 +50,7 @@ func TestFormatResolveError(t *testing.T) {
 		},
 		{
 			name:   "missing_scope error mentions target",
-			err:    fmt.Errorf("missing_scope"),
+			err:    scopeErr,
 			target: "#general",
 			check: func(s string) bool {
 				return strings.Contains(s, "#general") && strings.Contains(s, "missing_scope")
@@ -53,7 +58,7 @@ func TestFormatResolveError(t *testing.T) {
 		},
 		{
 			name:   "missing_scope suggests app create",
-			err:    fmt.Errorf("missing_scope"),
+			err:    scopeErr,
 			target: "#dev",
 			check: func(s string) bool {
 				return strings.Contains(s, "slackbuzz app create")
@@ -61,7 +66,7 @@ func TestFormatResolveError(t *testing.T) {
 		},
 		{
 			name:   "non-scope error includes target",
-			err:    fmt.Errorf("channel_not_found"),
+			err:    notFoundErr,
 			target: "#nonexistent",
 			check: func(s string) bool {
 				return strings.Contains(s, "#nonexistent") && strings.Contains(s, "channel_not_found")
@@ -80,6 +85,8 @@ func TestFormatResolveError(t *testing.T) {
 }
 
 func TestFormatSendError(t *testing.T) {
+	scopeErr := &slackapi.APIError{Method: "chat.postMessage", Code: slackapi.CodeMissingScope}
+	notFoundErr := &slackapi.APIError{Method: "chat.postMessage", Code: slackapi.CodeChannelNotFound}
 	tests := []struct {
 		name   string
 		err    error
@@ -88,7 +95,7 @@ func TestFormatSendError(t *testing.T) {
 	}{
 		{
 			name:   "missing_scope for DM suggests im:write",
-			err:    fmt.Errorf("missing_scope"),
+			err:    scopeErr,
 			target: "@alice",
 			check: func(s string) bool {
 				return strings.Contains(s, "im:write")
@@ -96,7 +103,7 @@ func TestFormatSendError(t *testing.T) {
 		},
 		{
 			name:   "missing_scope for channel suggests chat:write",
-			err:    fmt.Errorf("missing_scope"),
+			err:    scopeErr,
 			target: "#general",
 			check: func(s string) bool {
 				return strings.Contains(s, "chat:write")
@@ -104,7 +111,7 @@ func TestFormatSendError(t *testing.T) {
 		},
 		{
 			name:   "non-scope error uses friendly message",
-			err:    fmt.Errorf("channel_not_found"),
+			err:    notFoundErr,
 			target: "#gone",
 			check: func(s string) bool {
 				return strings.Contains(s, "Channel not found")

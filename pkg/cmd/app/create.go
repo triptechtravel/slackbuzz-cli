@@ -54,64 +54,6 @@ Once installed, copy the Bot and User OAuth tokens for 'slackbuzz auth login'.`,
 	return cmd
 }
 
-// appManifest is the pre-configured manifest for the SlackBuzz CLI app.
-var appManifest = map[string]interface{}{
-	"display_information": map[string]interface{}{
-		"name":             "SlackBuzz CLI",
-		"description":      "CLI tool for Slack messaging, channel management, and search",
-		"background_color": "#1a1a2e",
-	},
-	"features": map[string]interface{}{
-		"bot_user": map[string]interface{}{
-			"display_name":  "SlackBuzz",
-			"always_online": false,
-		},
-	},
-	"oauth_config": map[string]interface{}{
-		"scopes": map[string]interface{}{
-			"bot": []string{
-				"chat:write",
-				"channels:history",
-				"channels:read",
-				"emoji:read",
-				"files:read",
-				"files:write",
-				"groups:history",
-				"groups:read",
-				"im:history",
-				"im:read",
-				"im:write",
-				"mpim:history",
-				"mpim:read",
-				"reactions:read",
-				"reactions:write",
-				"users:read",
-			},
-			"user": []string{
-				"channels:read",
-				"chat:write",
-				"files:read",
-				"files:write",
-				"groups:read",
-				"im:read",
-				"im:write",
-				"mpim:read",
-				"search:read",
-				"stars:read",
-				"stars:write",
-				"users:read",
-				"users.profile:read",
-				"users.profile:write",
-			},
-		},
-	},
-	"settings": map[string]interface{}{
-		"org_deploy_enabled":    false,
-		"socket_mode_enabled":   false,
-		"token_rotation_enabled": false,
-	},
-}
-
 func createRun(opts *createOptions) error {
 	ios := opts.factory.IOStreams
 	cs := ios.ColorScheme()
@@ -131,7 +73,11 @@ func createRun(opts *createOptions) error {
 		configToken = strings.TrimSpace(scanner.Text())
 	} else {
 		fmt.Fprintln(ios.Out, "To create a Slack app, you need an App Configuration Token.")
-		fmt.Fprintln(ios.Out, "Get one from: api.slack.com/apps > Generate Token (bottom of page)")
+		fmt.Fprintln(ios.Out, "Where to find it:")
+		fmt.Fprintf(ios.Out, "  1. Go to %s (the apps LIST page)\n", cs.Cyan("https://api.slack.com/apps"))
+		fmt.Fprintln(ios.Out, "  2. Scroll to the bottom — section is titled \"Your App Configuration Tokens\"")
+		fmt.Fprintln(ios.Out, "  3. Click \"Generate Token\" next to your workspace, copy the Access Token (xoxe.xoxp-...)")
+		fmt.Fprintln(ios.Out, "  Note: this is a workspace-level admin token — NOT inside any individual app's credentials.")
 		fmt.Fprintln(ios.Out)
 
 		p := prompter.New(ios)
@@ -204,6 +150,13 @@ func createRun(opts *createOptions) error {
 	fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("App ID:"), result.AppID)
 	fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("Client ID:"), result.Credentials.ClientID)
 
+	// Persist the AppID so `slackbuzz app update` can target this app later
+	// without re-prompting.
+	ac.AppID = result.AppID
+	if saveErr := ac.Save(); saveErr != nil {
+		fmt.Fprintf(ios.ErrOut, "Warning: could not save app ID: %v\n", saveErr)
+	}
+
 	// Open the app install page
 	installURL := fmt.Sprintf("https://api.slack.com/apps/%s/install-on-team", result.AppID)
 	fmt.Fprintf(ios.Out, "\n%s Opening install page in your browser...\n", cs.Blue("→"))
@@ -218,8 +171,12 @@ func createRun(opts *createOptions) error {
 	storedBot := false
 	storedUser := false
 
-	fmt.Fprintln(ios.Out, cs.Bold("After installing, copy the OAuth tokens from the OAuth & Permissions page."))
-	fmt.Fprintln(ios.Out, "Token type is auto-detected from prefix (xoxb- = bot, xoxp- = user).")
+	oauthURL := fmt.Sprintf("https://api.slack.com/apps/%s/oauth", result.AppID)
+	fmt.Fprintln(ios.Out, cs.Bold("After installing, grab the OAuth tokens from the OAuth & Permissions page:"))
+	fmt.Fprintf(ios.Out, "  %s\n", cs.Cyan(oauthURL))
+	fmt.Fprintln(ios.Out, "  • Bot User OAuth Token (xoxb-...) — top of page")
+	fmt.Fprintln(ios.Out, "  • User OAuth Token (xoxp-...) — just below it")
+	fmt.Fprintln(ios.Out, "Token type is auto-detected from prefix.")
 	fmt.Fprintln(ios.Out)
 
 	// First token (required — bot token)

@@ -221,7 +221,7 @@ func addRun(opts *addOptions) error {
 		return err
 	}
 
-	resolver := api.NewResolver(client.Slack)
+	resolver := api.NewResolver(client.API)
 	channelID, err := resolver.ResolveChannel(opts.channel)
 	if err != nil {
 		return err
@@ -278,7 +278,7 @@ func removeRun(opts *removeOptions) error {
 		return err
 	}
 
-	resolver := api.NewResolver(client.Slack)
+	resolver := api.NewResolver(client.API)
 	channelID, err := resolver.ResolveChannel(opts.channel)
 	if err != nil {
 		return err

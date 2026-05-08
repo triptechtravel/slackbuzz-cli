@@ -1,13 +1,14 @@
 package digest
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/internal/text"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/activity"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
@@ -245,25 +246,42 @@ func fetchSlackActivity(opts *digestOptions) ([]slackItem, error) {
 		}
 	}
 
-	params := slack.SearchParameters{
-		Sort:          "timestamp",
-		SortDirection: "desc",
-		Count:         5,
-	}
-
-	result, err := client.Slack.SearchMessages(query, params)
+	resp, err := slackapi.SearchMessages(context.Background(), client.API, &slackapi.SearchMessagesParams{
+		Query:   query,
+		Sort:    "timestamp",
+		SortDir: "desc",
+		Count:   5,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("search failed: %w", err)
 	}
 
-	items := make([]slackItem, 0, len(result.Matches))
-	for _, match := range result.Matches {
+	type searchMatch struct {
+		Username string `json:"username"`
+		Text     string `json:"text"`
+		TS       string `json:"ts"`
+		Channel  struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"channel"`
+	}
+	var searchResult struct {
+		Messages struct {
+			Matches []searchMatch `json:"matches"`
+		} `json:"messages"`
+	}
+	if err := json.Unmarshal(resp.Raw, &searchResult); err != nil {
+		return nil, fmt.Errorf("decode search result: %w", err)
+	}
+
+	items := make([]slackItem, 0, len(searchResult.Messages.Matches))
+	for _, match := range searchResult.Messages.Matches {
 		channelName := match.Channel.Name
 		if channelName == "" {
 			channelName = match.Channel.ID
 		}
 
-		ts := activity.ParseSlackTimestamp(match.Timestamp)
+		ts := activity.ParseSlackTimestamp(match.TS)
 		timeStr := text.RelativeTime(ts)
 
 		items = append(items, slackItem{

@@ -1,12 +1,13 @@
 package channel
 
 import (
+	"context"
 	"fmt"
 	"time"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -48,18 +49,22 @@ func infoRun(opts *infoOptions) error {
 		return err
 	}
 
-	resolver := api.NewResolver(client.Slack)
+	resolver := api.NewResolver(client.API)
 	channelID, err := resolver.ResolveChannel(opts.channel)
 	if err != nil {
 		return err
 	}
 
-	ch, err := client.Slack.GetConversationInfo(&slack.GetConversationInfoInput{
-		ChannelID: channelID,
+	resp, err := slackapi.ConversationsInfo(context.Background(), client.API, &slackapi.ConversationsInfoParams{
+		Channel: channelID,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to get channel info: %w", err)
 	}
+	if resp.Channel == nil {
+		return fmt.Errorf("channel %s not found", channelID)
+	}
+	ch := resp.Channel
 
 	if opts.json.WantsJSON() {
 		return opts.json.OutputJSON(ios.Out, ch)
@@ -71,10 +76,10 @@ func infoRun(opts *infoOptions) error {
 	fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("ID:"), ch.ID)
 	fmt.Fprintf(ios.Out, "  %-16s %d\n", cs.Bold("Members:"), ch.NumMembers)
 	fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("Created:"), created.Format("2006-01-02"))
-	if ch.Topic.Value != "" {
+	if ch.Topic != nil && ch.Topic.Value != "" {
 		fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("Topic:"), ch.Topic.Value)
 	}
-	if ch.Purpose.Value != "" {
+	if ch.Purpose != nil && ch.Purpose.Value != "" {
 		fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("Purpose:"), ch.Purpose.Value)
 	}
 	fmt.Fprintf(ios.Out, "  %-16s %v\n", cs.Bold("Archived:"), ch.IsArchived)

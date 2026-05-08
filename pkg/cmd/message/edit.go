@@ -2,13 +2,14 @@ package message
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"strings"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -70,11 +71,11 @@ func editRun(opts *editOptions) error {
 		return err
 	}
 
-	resolver := api.NewResolver(client.Slack)
+	resolver := api.NewResolver(client.API)
 
-	channelID, err := resolver.ResolveChannel(opts.channel)
+	channelID, _, err := resolver.ResolveTarget(opts.channel)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s", api.FormatResolveError(err, opts.channel))
 	}
 
 	// Get message text from args or stdin
@@ -99,8 +100,11 @@ func editRun(opts *editOptions) error {
 		return fmt.Errorf("new message text cannot be empty")
 	}
 
-	_, _, _, err = client.Slack.UpdateMessage(channelID, opts.ts, slack.MsgOptionText(text, false))
-	if err != nil {
+	if _, err := slackapi.ChatUpdate(context.Background(), client.API, &slackapi.ChatUpdateParams{
+		Channel: channelID,
+		TS:      opts.ts,
+		Text:    text,
+	}); err != nil {
 		return fmt.Errorf("%s", api.FormatError(err))
 	}
 

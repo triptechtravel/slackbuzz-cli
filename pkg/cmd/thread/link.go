@@ -1,12 +1,14 @@
 package thread
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -72,15 +74,21 @@ func linkRun(opts *linkOptions) error {
 	messageText := fmt.Sprintf("📋 Linked to ClickUp task: <%s|%s>", taskURL, opts.taskID)
 
 	// Post as a thread reply
-	msgOpts := []slack.MsgOption{
-		slack.MsgOptionText(messageText, false),
-		slack.MsgOptionTS(threadTS),
-	}
-
-	respChannel, respTS, err := client.Slack.PostMessage(channelID, msgOpts...)
+	resp, err := slackapi.ChatPostMessage(context.Background(), client.API, &slackapi.ChatPostMessageParams{
+		Channel:  channelID,
+		Text:     messageText,
+		ThreadTS: threadTS,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to post thread reply: %w", err)
 	}
+	var posted struct {
+		Channel string `json:"channel"`
+		TS      string `json:"ts"`
+	}
+	_ = json.Unmarshal(resp.Raw, &posted)
+	respChannel := posted.Channel
+	respTS := posted.TS
 
 	if opts.json.WantsJSON() {
 		result := map[string]string{

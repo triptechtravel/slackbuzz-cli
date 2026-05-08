@@ -41,6 +41,25 @@ echo "$SLACK_BOT_TOKEN" | slackbuzz auth login --with-token
 slackbuzz auth status
 ```
 
+### Re-authenticating after a slackbuzz upgrade
+
+If a slackbuzz release adds new scope requirements (a new command whose
+Slack method needs a scope your existing app manifest doesn't grant),
+push the latest manifest to your existing Slack app and re-auth in one
+flow:
+
+```sh
+slackbuzz app update
+```
+
+This calls `apps.manifest.update` with the canonical manifest, opens the
+reinstall page so you can approve the new scopes, then prompts for the
+regenerated bot + user tokens.
+
+The manifest is generated automatically from the slackbuzz source tree
+(`make manifest-gen`), so the scope list is always exactly what the
+commands actually need — never more, never stale.
+
 ## Step 2: Check your inbox
 
 See what needs your attention -- mentions, DMs, and threads:

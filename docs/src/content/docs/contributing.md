@@ -28,9 +28,20 @@ go install ./cmd/slackbuzz
 
 # Regenerate CLI reference docs (Starlight markdown)
 make docs
+
+# Regenerate the typed Slack client from api/specs/slack_web.json
+make api-gen
+
+# Regenerate pkg/cmd/app/manifest.go from method usage
+make manifest-gen
+
+# CI gate — fail if generated artifacts have drifted
+make verify-gen
 ```
 
 Requires Go 1.25 or later.
+
+For the full design — codegen pipeline, spec patches, transport layer — see the [Architecture](./architecture/) page.
 
 ## Project structure
 

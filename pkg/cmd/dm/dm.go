@@ -1,26 +1,67 @@
 package dm
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
+	"github.com/triptechtravel/slackbuzz-cli/internal/recent"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/internal/text"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/activity"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
+// openLastDM is the behaviour of `slackbuzz dm` with no subcommand —
+// shows the user's recent DM history (newest first) so they can pick one
+// without remembering the exact handle. Single-shot output; doesn't open
+// a TUI.
+func openLastDM(f *cmdutil.Factory, _ string) error {
+	cs := f.IOStreams.ColorScheme()
+	out := f.IOStreams.Out
+
+	entries := recent.List("dm", 8)
+	if len(entries) == 0 {
+		fmt.Fprintln(out, "No recent DMs recorded yet — try `slackbuzz dm list` first.")
+		return nil
+	}
+
+	fmt.Fprintln(out, cs.Bold("Recent DMs (newest first)"))
+	for _, e := range entries {
+		when := text.RelativeTime(e.When)
+		fmt.Fprintf(out, "  %-24s %s\n", cs.Cyan(e.Target), cs.Gray(when))
+	}
+	fmt.Fprintln(out)
+	fmt.Fprintf(out, "%s slackbuzz message list %s\n", cs.Gray("Read:"), entries[0].Target)
+	fmt.Fprintf(out, "%s slackbuzz message send %s \"text\"\n", cs.Gray("Send:"), entries[0].Target)
+	return nil
+}
+
 // NewCmdDM returns the "dm" command group.
 func NewCmdDM(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "dm <command>",
+		Use:   "dm [<user>]",
 		Short: "Direct message management",
-		Long: `List DM conversations with recent activity.
+		Long: `Direct-message management.
 
 Reading and sending individual DMs works via:
   slackbuzz message list @user
-  slackbuzz message send @user "text"`,
+  slackbuzz message send @user "text"
+
+Running ` + "`slackbuzz dm`" + ` with no subcommand opens the most recent DM
+conversation (per the local recents file).`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// No-arg invocation: open the most recent DM, mirroring clickup-cli's
+			// "default to last context" pattern.
+			last := recent.Last("dm")
+			if last == "" {
+				return cmd.Help()
+			}
+			fmt.Fprintf(f.IOStreams.Out, "Opening last DM: %s\n", last)
+			return openLastDM(f, last)
+		},
 	}
 
 	cmd.AddCommand(newCmdList(f))
@@ -94,18 +135,32 @@ func listRun(opts *listOptions) error {
 		}
 	}
 
-	params := slack.SearchParameters{
-		Sort:          "timestamp",
-		SortDirection: "desc",
-		Count:         100, // fetch more to group by user
-	}
-
-	result, err := client.Slack.SearchMessages(query, params)
+	resp, err := slackapi.SearchMessages(context.Background(), client.API, &slackapi.SearchMessagesParams{
+		Query:   query,
+		Sort:    "timestamp",
+		SortDir: "desc",
+		Count:   100, // fetch more to group by user
+	})
 	if err != nil {
 		return fmt.Errorf("search failed: %w", err)
 	}
 
-	if result.Total == 0 {
+	var searchResult struct {
+		Messages struct {
+			Total   int `json:"total"`
+			Matches []struct {
+				User     string `json:"user"`
+				Username string `json:"username"`
+				Text     string `json:"text"`
+				TS       string `json:"ts"`
+			} `json:"matches"`
+		} `json:"messages"`
+	}
+	if err := json.Unmarshal(resp.Raw, &searchResult); err != nil {
+		return fmt.Errorf("decode search result: %w", err)
+	}
+
+	if searchResult.Messages.Total == 0 {
 		fmt.Fprintln(ios.Out, "No DM conversations found.")
 		return nil
 	}
@@ -118,7 +173,7 @@ func listRun(opts *listOptions) error {
 	}
 	grouped := make(map[string]*conversationAcc)
 
-	for _, match := range result.Matches {
+	for _, match := range searchResult.Messages.Matches {
 		user := match.Username
 		if user == "" {
 			user = match.User
@@ -133,8 +188,8 @@ func listRun(opts *listOptions) error {
 			grouped[user] = acc
 		}
 		acc.count++
-		if acc.lastTS == "" || match.Timestamp > acc.lastTS {
-			acc.lastTS = match.Timestamp
+		if acc.lastTS == "" || match.TS > acc.lastTS {
+			acc.lastTS = match.TS
 			acc.lastMessage = match.Text
 		}
 	}

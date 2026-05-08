@@ -1,18 +1,20 @@
 package api
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 	"sync"
 
-	"github.com/slack-go/slack"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 )
 
 // Resolver maps human-friendly channel names (#general) and user names (@alice)
 // to their Slack IDs. Results are cached for the lifetime of the process.
 type Resolver struct {
-	client      *slack.Client
+	client      *slackapi.Client
 	mu          sync.Mutex
 	channels    map[string]string // name → ID
 	users       map[string]string // name → ID
@@ -21,7 +23,7 @@ type Resolver struct {
 }
 
 // NewResolver creates a new Resolver backed by the given Slack client.
-func NewResolver(client *slack.Client) *Resolver {
+func NewResolver(client *slackapi.Client) *Resolver {
 	return &Resolver{
 		client:   client,
 		channels: make(map[string]string),
@@ -58,6 +60,21 @@ func (r *Resolver) ResolveChannel(nameOrID string) (string, error) {
 		return id, nil
 	}
 
+	// No exact match — try fuzzy. `@michell` → `@michelle`, `#stand` → `#stand-up`.
+	candidates := mapKeys(r.channels)
+	if matched, tier, ok := fuzzyMatch(nameOrID, candidates); ok && tier != matchExact {
+		// Only accept fuzzy hits with a confidence level above raw fuzzy —
+		// substring/contains is fine, RankMatch alone is too risky for
+		// channel writes (you don't want to post to the wrong channel).
+		if tier == matchContains {
+			return r.channels[matched], nil
+		}
+	}
+
+	suggestions := suggestSimilar(nameOrID, candidates, 3)
+	if len(suggestions) > 0 {
+		return "", fmt.Errorf("channel %q not found. Did you mean: %s?", nameOrID, strings.Join(suggestions, ", "))
+	}
 	return "", fmt.Errorf("channel %q not found", nameOrID)
 }
 
@@ -89,7 +106,28 @@ func (r *Resolver) ResolveUser(nameOrID string) (string, error) {
 		return id, nil
 	}
 
+	// No exact match — accept fuzzy contains (`@michell` → `@michelle`).
+	// Don't accept raw fuzzy here: typing the wrong handle and DM-ing the
+	// wrong person is worse than rejecting the input.
+	candidates := mapKeys(r.users)
+	if matched, tier, ok := fuzzyMatch(nameOrID, candidates); ok && tier == matchContains {
+		return r.users[matched], nil
+	}
+
+	suggestions := suggestSimilar(nameOrID, candidates, 3)
+	if len(suggestions) > 0 {
+		return "", fmt.Errorf("user %q not found. Did you mean: %s?", nameOrID, strings.Join(suggestions, ", "))
+	}
 	return "", fmt.Errorf("user %q not found", nameOrID)
+}
+
+// mapKeys returns a deduplicated list of map keys.
+func mapKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func (r *Resolver) loadChannels() error {
@@ -100,28 +138,30 @@ func (r *Resolver) loadChannels() error {
 	}
 	r.mu.Unlock()
 
-	params := &slack.GetConversationsParameters{
-		Types:           []string{"public_channel", "private_channel", "im", "mpim"},
+	params := &slackapi.ConversationsListParams{
+		Types:           "public_channel,private_channel,im,mpim",
 		Limit:           1000,
 		ExcludeArchived: true,
 	}
 
+	ctx := context.Background()
 	for {
-		channels, nextCursor, err := r.client.GetConversations(params)
+		resp, err := slackapi.ConversationsList(ctx, r.client, params)
 		if err != nil {
 			return err
 		}
-
 		r.mu.Lock()
-		for _, ch := range channels {
+		for _, ch := range resp.Channels {
+			if ch == nil {
+				continue
+			}
 			r.channels[ch.Name] = ch.ID
 		}
 		r.mu.Unlock()
-
-		if nextCursor == "" {
+		if resp.ResponseMetadata.NextCursor == "" {
 			break
 		}
-		params.Cursor = nextCursor
+		params.Cursor = resp.ResponseMetadata.NextCursor
 	}
 
 	r.mu.Lock()
@@ -139,13 +179,16 @@ func (r *Resolver) ResolveDM(nameOrID string) (string, error) {
 		return "", err
 	}
 
-	ch, _, _, err := r.client.OpenConversation(&slack.OpenConversationParameters{
-		Users: []string{userID},
+	resp, err := slackapi.ConversationsOpen(context.Background(), r.client, &slackapi.ConversationsOpenParams{
+		Users: userID,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to open DM with %q: %w", nameOrID, err)
 	}
-	return ch.ID, nil
+	if resp.Channel == nil || resp.Channel.ID == "" {
+		return "", fmt.Errorf("open DM with %q: response had no channel ID", nameOrID)
+	}
+	return resp.Channel.ID, nil
 }
 
 // LooksLikeUser returns true if the target looks like a user reference
@@ -218,9 +261,37 @@ func (r *Resolver) loadUsers() error {
 	}
 	r.mu.Unlock()
 
-	users, err := r.client.GetUsers()
-	if err != nil {
-		return err
+	// Page through users.list. Slack returns up to 1000 per page; we
+	// keep going until next_cursor empties.
+	type userRecord struct {
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		Deleted bool   `json:"deleted"`
+		Profile struct {
+			DisplayName string `json:"display_name"`
+		} `json:"profile"`
+	}
+	var allUsers []userRecord
+	cursor := ""
+	for {
+		resp, err := slackapi.UsersList(context.Background(), r.client, &slackapi.UsersListParams{
+			Limit:  1000,
+			Cursor: cursor,
+		})
+		if err != nil {
+			return err
+		}
+		var page struct {
+			Members []userRecord `json:"members"`
+		}
+		if err := json.Unmarshal(resp.Raw, &page); err != nil {
+			return err
+		}
+		allUsers = append(allUsers, page.Members...)
+		if resp.ResponseMetadata.NextCursor == "" {
+			break
+		}
+		cursor = resp.ResponseMetadata.NextCursor
 	}
 
 	r.mu.Lock()
@@ -233,7 +304,7 @@ func (r *Resolver) loadUsers() error {
 	}
 	partials := make(map[string]*candidate)
 
-	for _, u := range users {
+	for _, u := range allUsers {
 		if u.Deleted {
 			continue
 		}

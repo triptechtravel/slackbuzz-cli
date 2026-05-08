@@ -1,12 +1,13 @@
 package react
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -58,21 +59,20 @@ func reactRun(opts *reactOptions) error {
 		return err
 	}
 
-	resolver := api.NewResolver(client.Slack)
-	channelID, err := resolver.ResolveChannel(opts.channel)
+	resolver := api.NewResolver(client.API)
+	channelID, _, err := resolver.ResolveTarget(opts.channel)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s", api.FormatResolveError(err, opts.channel))
 	}
 
 	// Strip colons from emoji name
 	emoji := strings.Trim(opts.emoji, ":")
 
-	ref := slack.ItemRef{
+	if _, err := slackapi.ReactionsAdd(context.Background(), client.API, &slackapi.ReactionsAddParams{
 		Channel:   channelID,
 		Timestamp: opts.ts,
-	}
-
-	if err := client.Slack.AddReaction(emoji, ref); err != nil {
+		Name:      emoji,
+	}); err != nil {
 		return fmt.Errorf("failed to add reaction: %w", err)
 	}
 
