@@ -121,20 +121,20 @@ func apiNameToGoName(apiName string) string {
 // findCalledMethods walks the Go source tree under cmdRoot and returns the
 // set of Slack API method names called via `slackapi.<GoName>(...)`.
 //
-// It also recognises the hand-augmented operations (UploadFile → files.upload,
-// SearchFiles → search.files) so the manifest stays correct even when the
-// generated operation set isn't the only source of truth.
+// It also recognises the hand-augmented operations (SearchFiles → search.files,
+// UploadFile → files.getUploadURLExternal + files.completeUploadExternal) so
+// the manifest stays correct even when the generated operation set isn't the
+// only source of truth. UploadFile maps to TWO methods because Slack's modern
+// upload flow is a 3-step external dance.
 func findCalledMethods(cmdRoot string, goToAPI map[string]string) (map[string]bool, error) {
 	called := map[string]bool{}
 
 	// Hand-augmented mappings — keep in sync with internal/slackapi/operations.go
-	// and internal/slackapi/files.go.
-	handAugmented := map[string]string{
-		"SearchFiles": "search.files",
-		"UploadFile":  "files.upload",
-	}
-	for k, v := range handAugmented {
-		goToAPI[k] = v
+	// and internal/slackapi/files.go. A single Go function can map to multiple
+	// underlying API methods (e.g. UploadFile uses two endpoints).
+	handAugmented := map[string][]string{
+		"SearchFiles": {"search.files"},
+		"UploadFile":  {"files.getUploadURLExternal", "files.completeUploadExternal"},
 	}
 
 	fset := token.NewFileSet()
@@ -166,7 +166,14 @@ func findCalledMethods(cmdRoot string, goToAPI map[string]string) (map[string]bo
 			if !ok || id.Name != "slackapi" {
 				return true
 			}
-			if api, ok := goToAPI[sel.Sel.Name]; ok {
+			funcName := sel.Sel.Name
+			if apis, ok := handAugmented[funcName]; ok {
+				for _, api := range apis {
+					called[api] = true
+				}
+				return true
+			}
+			if api, ok := goToAPI[funcName]; ok {
 				called[api] = true
 			}
 			return true

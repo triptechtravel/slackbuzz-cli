@@ -26,7 +26,8 @@ package app
 //   - conversations.info
 //   - conversations.list
 //   - conversations.replies
-//   - files.upload
+//   - files.completeUploadExternal
+//   - files.getUploadURLExternal
 //   - reactions.add
 //   - reactions.get
 //   - reactions.remove

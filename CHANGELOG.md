@@ -7,6 +7,24 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.1]
+
+### Fixed
+
+- **`slackbuzz file upload` was broken in v0.11.0** — Slack hard-deprecated
+  the legacy `files.upload` endpoint and started returning `method_deprecated`
+  on every fresh request. Replaced the single-call `files.upload` wrapper
+  with the modern 3-step external-upload flow:
+  `files.getUploadURLExternal` → presigned multipart POST →
+  `files.completeUploadExternal`. The public `slackapi.UploadFile` signature
+  is unchanged, so callers don't need to touch anything. Added unit tests
+  (mocked 3-step flow) and verified end-to-end against live Slack.
+- **Manifest reflects the two new endpoints.** `gen-manifest`'s
+  `handAugmented` map now supports a single Go function mapping to multiple
+  API methods so scopes for both upload endpoints are picked up.
+
+## [0.11.0]
+
 ### Added
 
 - **`slackbuzz app update`** — push the latest scope manifest to an existing
