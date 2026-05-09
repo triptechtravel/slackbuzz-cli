@@ -3,8 +3,6 @@ title: Command reference
 description: Complete reference for all slackbuzz CLI commands and flags.
 ---
 
-# Command reference
-
 All commands are invoked as subcommands of `slackbuzz`. Run `slackbuzz --help` for a summary, or `slackbuzz <command> --help` for details on any command.
 
 ## Token selection

@@ -3,8 +3,6 @@ title: Cross-tool integration
 description: How slackbuzz bridges Slack, ClickUp, and GitHub from the terminal.
 ---
 
-# Cross-tool integration
-
 SlackBuzz is designed as the glue between Slack, ClickUp, and GitHub CLIs. It detects references to other tools in your Slack messages and provides actionable hints.
 
 ## Enrichment in activity views

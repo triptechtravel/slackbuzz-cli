@@ -3,8 +3,6 @@ title: AI agents
 description: Using the slackbuzz CLI with AI coding agents like Claude Code, GitHub Copilot, and Cursor.
 ---
 
-# Using with AI agents
-
 The CLI is designed to work with AI coding agents like Claude Code, GitHub Copilot, and Cursor. Every command supports structured output, so an agent can read Slack context, send messages, and manage tasks -- all without leaving the terminal.
 
 ## Why this matters

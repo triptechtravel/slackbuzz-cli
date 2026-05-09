@@ -3,8 +3,6 @@ title: Architecture
 description: How slackbuzz is built — codegen pipeline, package layout, scope handling.
 ---
 
-# Architecture
-
 This page is for contributors. Users don't need to read it.
 
 ## Layout

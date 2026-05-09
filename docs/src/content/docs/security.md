@@ -3,8 +3,6 @@ title: Security
 description: Credential storage, security best practices, and vulnerability reporting.
 ---
 
-# Security
-
 ## Credential storage
 
 The CLI stores your Slack tokens in the operating system keyring:

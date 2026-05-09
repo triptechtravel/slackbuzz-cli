@@ -3,8 +3,6 @@ title: Team Setup
 description: Get your team up and running with slackbuzz in one command.
 ---
 
-# Team setup
-
 Get a teammate from zero to fully operational with a single command.
 
 ## One-line setup

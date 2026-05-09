@@ -3,8 +3,6 @@ title: Contributing
 description: Development setup, project structure, and contribution guidelines.
 ---
 
-# Contributing
-
 Thank you for your interest in contributing to slackbuzz-cli! This page covers development setup, project structure, and contribution guidelines.
 
 ## Development setup

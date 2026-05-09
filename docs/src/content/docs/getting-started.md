@@ -3,8 +3,6 @@ title: Getting started
 description: Initial setup walkthrough for the slackbuzz CLI.
 ---
 
-# Getting started
-
 This guide walks through initial setup and your first interaction with the CLI.
 
 ## Step 1: Create a Slack app
