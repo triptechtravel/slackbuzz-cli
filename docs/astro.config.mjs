@@ -4,9 +4,6 @@ import starlight from '@astrojs/starlight';
 export default defineConfig({
   site: 'https://triptechtravel.github.io',
   base: '/slackbuzz-cli',
-  legacy: {
-    collections: true,
-  },
   integrations: [
     starlight({
       title: 'slackbuzz CLI',
@@ -24,9 +21,9 @@ export default defineConfig({
         { tag: 'meta', attrs: { property: 'og:description', content: 'A command-line tool for working with Slack messages, channels, and cross-tool workflows -- designed for developers who live in the terminal.' } },
         { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' } },
       ],
-      social: {
-        github: 'https://github.com/triptechtravel/slackbuzz-cli',
-      },
+      social: [
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/triptechtravel/slackbuzz-cli' },
+      ],
       sidebar: [
         {
           label: 'Getting Started',
@@ -53,7 +50,7 @@ export default defineConfig({
         {
           label: 'Reference',
           collapsed: true,
-          autogenerate: { directory: 'reference' },
+          items: [{ autogenerate: { directory: 'reference' } }],
         },
         {
           label: 'Project',
