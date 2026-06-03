@@ -8,9 +8,9 @@ import (
 // NewCmdMessage returns the top-level "message" command.
 func NewCmdMessage(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "message <command>",
-		Short: "Send and read Slack messages",
-		Long:  "Post messages to channels, read channel history, and search messages.",
+		Use:     "message <command>",
+		Short:   "Send and read Slack messages",
+		Long:    "Post messages to channels, read channel history, and search messages.",
 		Aliases: []string{"msg"},
 	}
 

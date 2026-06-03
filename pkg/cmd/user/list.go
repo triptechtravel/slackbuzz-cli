@@ -11,10 +11,10 @@ import (
 )
 
 type listOptions struct {
-	factory       *cmdutil.Factory
+	factory            *cmdutil.Factory
 	includeDeactivated bool
-	limit         int
-	json          cmdutil.JSONFlags
+	limit              int
+	json               cmdutil.JSONFlags
 }
 
 // NewCmdList returns the "user list" command.
@@ -118,7 +118,7 @@ func listRun(opts *listOptions) error {
 	tp := tableprinter.New(ios)
 	for _, u := range rows {
 		tp.AddField(u.ID)
-		tp.AddField(cs.Bold("@"+u.Name))
+		tp.AddField(cs.Bold("@" + u.Name))
 		displayName := u.RealName
 		if u.DisplayName != "" {
 			displayName = u.DisplayName

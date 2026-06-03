@@ -30,7 +30,7 @@ func NewCmdLink(f *cmdutil.Factory) *cobra.Command {
 and post a ClickUp task link as a reply to that thread.
 
 The Slack URL format: https://workspace.slack.com/archives/CHANNEL_ID/pTIMESTAMP`,
-		Example: `  slackbuzz thread link https://myteam.slack.com/archives/C012345/p1706000000000000 CU-abc123`,
+		Example:           `  slackbuzz thread link https://myteam.slack.com/archives/C012345/p1706000000000000 CU-abc123`,
 		Args:              cobra.ExactArgs(2),
 		PersistentPreRunE: cmdutil.NeedsAuth(f),
 		RunE: func(cmd *cobra.Command, args []string) error {

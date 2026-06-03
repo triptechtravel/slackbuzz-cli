@@ -20,7 +20,7 @@ import (
 )
 
 type createOptions struct {
-	factory    *cmdutil.Factory
+	factory     *cmdutil.Factory
 	configToken string
 	withToken   bool
 }
@@ -249,9 +249,9 @@ func storeDetectedToken(ios *iostreams.IOStreams, cs *iostreams.ColorScheme, tok
 }
 
 type manifestCreateResponse struct {
-	OK    bool   `json:"ok"`
-	Error string `json:"error,omitempty"`
-	AppID string `json:"app_id,omitempty"`
+	OK          bool   `json:"ok"`
+	Error       string `json:"error,omitempty"`
+	AppID       string `json:"app_id,omitempty"`
 	Credentials struct {
 		ClientID          string `json:"client_id"`
 		ClientSecret      string `json:"client_secret"`
@@ -259,7 +259,7 @@ type manifestCreateResponse struct {
 		SigningSecret     string `json:"signing_secret"`
 	} `json:"credentials,omitempty"`
 	OAuthAuthorizeURL string `json:"oauth_authorize_url,omitempty"`
-	Errors []struct {
+	Errors            []struct {
 		Message string `json:"message"`
 		Pointer string `json:"pointer"`
 	} `json:"errors,omitempty"`

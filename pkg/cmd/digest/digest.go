@@ -66,9 +66,9 @@ Sections are gracefully skipped if the CLI isn't available.`,
 }
 
 type digestData struct {
-	Slack    []slackItem    `json:"slack,omitempty"`
-	ClickUp []clickupTask  `json:"clickup,omitempty"`
-	GitHub   []githubPR     `json:"github,omitempty"`
+	Slack   []slackItem   `json:"slack,omitempty"`
+	ClickUp []clickupTask `json:"clickup,omitempty"`
+	GitHub  []githubPR    `json:"github,omitempty"`
 }
 
 type slackItem struct {
@@ -342,9 +342,9 @@ func fetchGitHubPRs() ([]githubPR, error) {
 	}
 
 	var prs []struct {
-		Number    int    `json:"number"`
-		Title     string `json:"title"`
-		Author    struct {
+		Number int    `json:"number"`
+		Title  string `json:"title"`
+		Author struct {
 			Login string `json:"login"`
 		} `json:"author"`
 		Additions int `json:"additions"`

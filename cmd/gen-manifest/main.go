@@ -218,9 +218,9 @@ func classifyScopes(scopes []string) (bot, user []string) {
 // the source tree. These give the bot a usable presence on install and
 // support the install-time auth.test handshake.
 var baselineBotScopes = []string{
-	"users:read",  // resolver needs users.list
-	"emoji:read",  // emoji rendering
-	"chat:write",  // posting
+	"users:read", // resolver needs users.list
+	"emoji:read", // emoji rendering
+	"chat:write", // posting
 	"channels:read",
 	"groups:read",
 	"im:read",

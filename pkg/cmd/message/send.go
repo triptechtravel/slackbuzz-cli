@@ -69,7 +69,7 @@ blocks (Slack's 3000-char limit per block).`,
 
   # Pipe from a command
   git log --oneline -5 | slackbuzz message send #dev-logs`,
-		Args: cobra.RangeArgs(1, 2),
+		Args:              cobra.RangeArgs(1, 2),
 		PersistentPreRunE: cmdutil.NeedsAuth(f),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.channel = args[0]

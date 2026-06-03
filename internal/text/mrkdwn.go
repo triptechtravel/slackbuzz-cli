@@ -14,7 +14,7 @@ import (
 
 var (
 	// Markdown bold: **text** or __text__ → *text*
-	mdBoldDoubleAsterisk = regexp.MustCompile(`\*\*(.+?)\*\*`)
+	mdBoldDoubleAsterisk   = regexp.MustCompile(`\*\*(.+?)\*\*`)
 	mdBoldDoubleUnderscore = regexp.MustCompile(`__(.+?)__`)
 
 	// Markdown italic: *text* is already valid mrkdwn, but _text_ also works.

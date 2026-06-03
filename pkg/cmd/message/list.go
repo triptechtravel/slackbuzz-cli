@@ -53,7 +53,7 @@ The argument accepts:
 
   # Output as JSON
   slackbuzz message list #general --json`,
-		Args: cobra.ExactArgs(1),
+		Args:              cobra.ExactArgs(1),
 		PersistentPreRunE: cmdutil.NeedsAuth(f),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.channel = args[0]

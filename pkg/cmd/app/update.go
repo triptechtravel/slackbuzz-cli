@@ -18,9 +18,9 @@ import (
 )
 
 type updateOptions struct {
-	factory      *cmdutil.Factory
-	appID        string
-	withToken    bool
+	factory       *cmdutil.Factory
+	appID         string
+	withToken     bool
 	skipReinstall bool
 }
 

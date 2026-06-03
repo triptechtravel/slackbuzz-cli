@@ -108,10 +108,10 @@ Requires a user token (xoxp-).`,
 }
 
 type dmConversation struct {
-	User        string `json:"user"`
-	MessageCount int   `json:"message_count"`
-	LastMessage string `json:"last_message"`
-	LastTime    string `json:"last_time"`
+	User         string `json:"user"`
+	MessageCount int    `json:"message_count"`
+	LastMessage  string `json:"last_message"`
+	LastTime     string `json:"last_time"`
 }
 
 func listRun(opts *listOptions) error {

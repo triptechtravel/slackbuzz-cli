@@ -157,4 +157,3 @@ func FormatSendError(err error, target string) string {
 	}
 	return err.Error()
 }
-

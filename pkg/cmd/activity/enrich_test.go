@@ -6,9 +6,9 @@ import (
 
 func TestExtractHints(t *testing.T) {
 	tests := []struct {
-		name  string
-		text  string
-		want  []Hint
+		name string
+		text string
+		want []Hint
 	}{
 		{
 			name: "clickup task ID",

@@ -196,10 +196,10 @@ func newCmdAdd(f *cmdutil.Factory) *cobra.Command {
 	opts := &addOptions{factory: f}
 
 	cmd := &cobra.Command{
-		Use:   "add <channel> <timestamp>",
-		Short: "Save a message for later",
-		Long:  "Star/bookmark a message by channel and timestamp.",
-		Example: `  slackbuzz later add #general 1706000000.000000`,
+		Use:               "add <channel> <timestamp>",
+		Short:             "Save a message for later",
+		Long:              "Star/bookmark a message by channel and timestamp.",
+		Example:           `  slackbuzz later add #general 1706000000.000000`,
 		Args:              cobra.ExactArgs(2),
 		PersistentPreRunE: cmdutil.NeedsUserToken(f),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -253,10 +253,10 @@ func newCmdRemove(f *cmdutil.Factory) *cobra.Command {
 	opts := &removeOptions{factory: f}
 
 	cmd := &cobra.Command{
-		Use:   "remove <channel> <timestamp>",
-		Short: "Unsave a message",
-		Long:  "Remove a star/bookmark from a message.",
-		Example: `  slackbuzz later remove #general 1706000000.000000`,
+		Use:               "remove <channel> <timestamp>",
+		Short:             "Unsave a message",
+		Long:              "Remove a star/bookmark from a message.",
+		Example:           `  slackbuzz later remove #general 1706000000.000000`,
 		Args:              cobra.ExactArgs(2),
 		PersistentPreRunE: cmdutil.NeedsUserToken(f),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -331,4 +331,3 @@ func starAction(token, method, channel, timestamp string) error {
 
 	return nil
 }
-

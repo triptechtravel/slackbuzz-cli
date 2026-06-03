@@ -33,10 +33,10 @@ Exit code 1 if any check fails.`,
 }
 
 type checkResult struct {
-	name    string
-	passed  bool
-	detail  string
-	fix     string
+	name   string
+	passed bool
+	detail string
+	fix    string
 }
 
 func doctorRun(f *cmdutil.Factory) error {
