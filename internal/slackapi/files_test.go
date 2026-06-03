@@ -44,7 +44,7 @@ func uploadTestServer(t *testing.T) (*Client, *uploadTestRecord) {
 		require.NoError(t, r.ParseForm())
 		rec.step1Form = r.Form
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"ok":true,"upload_url":"` + srv.URL + `/upload-presigned/F123","file_id":"F123"}`))
+		_, _ = w.Write([]byte(`{"ok":true,"upload_url":"` + srv.URL + `/upload-presigned/F123","file_id":"F123"}`))
 	})
 
 	mux.HandleFunc("/upload-presigned/F123", func(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +77,7 @@ func uploadTestServer(t *testing.T) (*Client, *uploadTestRecord) {
 		require.NoError(t, r.ParseForm())
 		rec.step3Form = r.Form
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"ok":true,"files":[{"id":"F123","title":"hello","name":"hello.txt","mimetype":"text/plain","url_private":"https://files.slack.com/F123","permalink":"https://slack.com/permalink/F123"}]}`))
+		_, _ = w.Write([]byte(`{"ok":true,"files":[{"id":"F123","title":"hello","name":"hello.txt","mimetype":"text/plain","url_private":"https://files.slack.com/F123","permalink":"https://slack.com/permalink/F123"}]}`))
 	})
 
 	c := New("xoxp-test-token")
@@ -139,7 +139,7 @@ func TestUploadFile_Step1ErrorPropagates(t *testing.T) {
 	t.Cleanup(srv.Close)
 	mux.HandleFunc("/api/files.getUploadURLExternal", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"ok":false,"error":"missing_scope","needed":"files:write"}`))
+		_, _ = w.Write([]byte(`{"ok":false,"error":"missing_scope","needed":"files:write"}`))
 	})
 	c := New("xoxp-test-token")
 	c.BaseURL = srv.URL + "/api"
@@ -156,14 +156,14 @@ func TestUploadFile_Step3ErrorPropagates(t *testing.T) {
 	t.Cleanup(srv.Close)
 	mux.HandleFunc("/api/files.getUploadURLExternal", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"ok":true,"upload_url":"` + srv.URL + `/upload","file_id":"F999"}`))
+		_, _ = w.Write([]byte(`{"ok":true,"upload_url":"` + srv.URL + `/upload","file_id":"F999"}`))
 	})
 	mux.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	mux.HandleFunc("/api/files.completeUploadExternal", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"ok":false,"error":"channel_not_found"}`))
+		_, _ = w.Write([]byte(`{"ok":false,"error":"channel_not_found"}`))
 	})
 	c := New("xoxp-test-token")
 	c.BaseURL = srv.URL + "/api"

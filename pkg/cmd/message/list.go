@@ -206,6 +206,7 @@ func listRun(opts *listOptions) error {
 func parseSlackTimestamp(ts string) time.Time {
 	// Slack timestamps are Unix timestamps like "1234567890.123456"
 	var sec, usec int64
-	fmt.Sscanf(ts, "%d.%d", &sec, &usec)
+	// Best-effort parse: on malformed input sec/usec stay zero.
+	_, _ = fmt.Sscanf(ts, "%d.%d", &sec, &usec)
 	return time.Unix(sec, usec*1000)
 }

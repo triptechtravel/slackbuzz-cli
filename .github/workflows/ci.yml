@@ -55,10 +55,10 @@ jobs:
             echo "$unformatted"
             exit 1
           fi
-      - uses: golangci/golangci-lint-action@v6
+      - uses: golangci/golangci-lint-action@v8
         with:
-          version: latest
-          # Keep CI lint surface narrow until the codebase has dedicated
-          # linter sweeps — vet + gofmt cover most regressions, golangci
-          # adds standard staticcheck/gosimple on top.
+          # v2 is required to target Go 1.25 — v1 refuses to lint a module
+          # whose go directive is newer than the Go it was built with.
+          # Lint surface is kept narrow via .golangci.yml.
+          version: v2.7.0
           args: --timeout=5m

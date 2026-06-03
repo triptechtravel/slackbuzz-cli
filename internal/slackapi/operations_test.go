@@ -42,7 +42,7 @@ func TestDo_AuthHeaderAndForm(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		capturedBody = string(body)
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"ok":true}`))
+		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
 
 	_, err := AuthTest(context.Background(), c)
@@ -61,7 +61,7 @@ func TestDo_FormParamsAreEncoded(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		capturedForm, _ = url.ParseQuery(string(body))
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"ok":true}`))
+		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
 
 	_, err := ConversationsHistory(context.Background(), c, &ConversationsHistoryParams{
@@ -81,7 +81,7 @@ func TestDo_OmitsZeroValueOptionalParams(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		capturedForm, _ = url.ParseQuery(string(body))
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"ok":true}`))
+		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
 
 	_, err := ConversationsHistory(context.Background(), c, &ConversationsHistoryParams{
@@ -104,7 +104,7 @@ func TestResponse_OkAndRawBody(t *testing.T) {
 
 	_, c := testServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(body))
+		_, _ = w.Write([]byte(body))
 	})
 
 	resp, err := AuthTest(context.Background(), c)
@@ -125,7 +125,7 @@ func TestResponse_OkAndRawBody(t *testing.T) {
 func TestResponse_NotOkReturnsAPIError(t *testing.T) {
 	_, c := testServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"ok":false,"error":"channel_not_found"}`))
+		_, _ = w.Write([]byte(`{"ok":false,"error":"channel_not_found"}`))
 	})
 
 	_, err := ConversationsHistory(context.Background(), c, &ConversationsHistoryParams{Channel: "Cdoesnotexist"})
@@ -148,7 +148,7 @@ func TestResponse_MissingScopeExtractsScopes(t *testing.T) {
 	// can suggest specific scope additions.
 	_, c := testServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"ok":false,"error":"missing_scope","needed":"im:history,mpim:history","provided":"identify,users:read"}`))
+		_, _ = w.Write([]byte(`{"ok":false,"error":"missing_scope","needed":"im:history,mpim:history","provided":"identify,users:read"}`))
 	})
 
 	_, err := ConversationsHistory(context.Background(), c, &ConversationsHistoryParams{Channel: "D123"})
@@ -164,7 +164,7 @@ func TestResponse_MissingScopeExtractsScopes(t *testing.T) {
 func TestResponse_DecodeFailureWrapsRawBody(t *testing.T) {
 	_, c := testServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`<html>not json</html>`))
+		_, _ = w.Write([]byte(`<html>not json</html>`))
 	})
 
 	_, err := AuthTest(context.Background(), c)
@@ -230,7 +230,7 @@ func TestParams_BoolEncoding(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		captured, _ = url.ParseQuery(string(body))
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"ok":true}`))
+		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
 
 	_, err := ConversationsHistory(context.Background(), c, &ConversationsHistoryParams{
@@ -249,7 +249,7 @@ func TestParams_NilSafe(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		captured = string(body)
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"ok":true}`))
+		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
 
 	_, err := ConversationsHistory(context.Background(), c, nil)

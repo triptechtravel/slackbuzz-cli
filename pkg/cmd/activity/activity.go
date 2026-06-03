@@ -374,7 +374,8 @@ func ParseDuration(s string) (time.Duration, error) {
 // ParseSlackTimestamp converts a Slack timestamp to time.Time.
 func ParseSlackTimestamp(ts string) time.Time {
 	var sec, usec int64
-	fmt.Sscanf(ts, "%d.%d", &sec, &usec)
+	// Best-effort parse: on malformed input sec/usec stay zero.
+	_, _ = fmt.Sscanf(ts, "%d.%d", &sec, &usec)
 	return time.Unix(sec, usec*1000)
 }
 

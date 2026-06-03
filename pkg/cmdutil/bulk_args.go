@@ -20,9 +20,7 @@ import (
 func ExpandArgs(args []string) []string {
 	out := make([]string, 0, len(args))
 	for _, a := range args {
-		for _, part := range strings.Fields(a) {
-			out = append(out, part)
-		}
+		out = append(out, strings.Fields(a)...)
 	}
 	return out
 }

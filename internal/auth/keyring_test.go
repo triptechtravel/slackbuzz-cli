@@ -114,7 +114,7 @@ func TestKeyringFallbackToFile(t *testing.T) {
 	os.Stdout = oldStdout
 	// Drain the pipe so it doesn't block.
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	_, _ = buf.ReadFrom(r)
 
 	// Verify the auth file was created.
 	if _, err := os.Stat(config.AuthFile()); err != nil {
@@ -148,7 +148,7 @@ func TestKeyringFallbackWarning(t *testing.T) {
 	os.Stdout = oldStdout
 
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	_, _ = buf.ReadFrom(r)
 	output := buf.String()
 
 	if !strings.Contains(output, "plain text") {

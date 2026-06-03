@@ -235,7 +235,9 @@ func updateRun(opts *updateOptions) error {
 		if err == nil {
 			token2 = strings.TrimSpace(token2)
 			if token2 != "" {
-				storedBot, storedUser = storeDetectedToken(ios, cs, token2, storedBot, storedUser)
+				// Last token in the flow — store it for its side effect; the
+				// returned flags aren't read again before we return.
+				_, _ = storeDetectedToken(ios, cs, token2, storedBot, storedUser)
 			}
 		}
 	}

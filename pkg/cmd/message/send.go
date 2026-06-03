@@ -291,7 +291,7 @@ func splitForBlocks(text string, maxLen int) []string {
 
 	for len(remaining) > maxLen {
 		// Try to split at a paragraph boundary (double newline)
-		splitAt := -1
+		var splitAt int
 		if idx := strings.LastIndex(remaining[:maxLen], "\n\n"); idx > 0 {
 			splitAt = idx
 		} else if idx := strings.LastIndex(remaining[:maxLen], "\n"); idx > 0 {

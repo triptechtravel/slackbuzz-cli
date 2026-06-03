@@ -39,9 +39,6 @@ var (
 	// Slack renders - as a literal hyphen, not a bullet. • is the real bullet.
 	mdUnorderedList = regexp.MustCompile(`(?m)^(\s*)[-*]\s+`)
 
-	// Markdown ordered list: 1. item → 1. item (already works, but detect for hints)
-	mdOrderedList = regexp.MustCompile(`(?m)^\s*\d+\.\s+`)
-
 	// Detect markdown-style bold that won't render in Slack
 	detectDoubleBold = regexp.MustCompile(`\*\*[^*]+\*\*`)
 

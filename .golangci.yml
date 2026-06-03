@@ -1,0 +1,13 @@
+# golangci-lint v2 config.
+#
+# Keep the lint surface narrow: the default linters (errcheck, govet,
+# ineffassign, staticcheck, unused) plus the standard exclusion preset
+# for conventionally-ignored stdlib error returns — writes to CLI output
+# streams (fmt.Fprint*), Close on deferred files/response bodies, etc.
+# These are intentional in a CLI and checking them adds noise, not safety.
+version: "2"
+
+linters:
+  exclusions:
+    presets:
+      - std-error-handling
