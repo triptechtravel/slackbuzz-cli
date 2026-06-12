@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
 	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
+	slacktext "github.com/triptechtravel/slackbuzz-cli/internal/text"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -19,6 +20,7 @@ type editOptions struct {
 	ts      string
 	text    string
 	asBot   bool
+	raw     bool
 	json    cmdutil.JSONFlags
 }
 
@@ -32,7 +34,11 @@ func NewCmdEdit(f *cmdutil.Factory) *cobra.Command {
 		Long: `Update the text of an existing Slack message.
 
 The channel argument accepts #channel-name or a channel ID.
-If new-text is omitted, reads from stdin (for piping).`,
+If new-text is omitted, reads from stdin (for piping).
+
+The new text goes through the same pipeline as message send: standard
+Markdown (**bold**, # headers, [links](url)) is converted to Slack mrkdwn
+and @mentions are resolved. Use --raw to disable the Markdown conversion.`,
 		Example: `  # Edit a message
   slackbuzz message edit #general 1706000000.000000 "updated text"
 
@@ -51,6 +57,7 @@ If new-text is omitted, reads from stdin (for piping).`,
 	}
 
 	cmd.Flags().BoolVar(&opts.asBot, "as-bot", false, "Edit as the bot instead of your user account")
+	cmd.Flags().BoolVar(&opts.raw, "raw", false, "Disable Markdown→mrkdwn auto-conversion")
 	cmdutil.AddJSONFlags(cmd, &opts.json)
 
 	return cmd
@@ -98,6 +105,21 @@ func editRun(opts *editOptions) error {
 
 	if text == "" {
 		return fmt.Errorf("new message text cannot be empty")
+	}
+
+	// Same text pipeline as message send: shell unescape, Markdown→mrkdwn,
+	// and @mention resolution.
+	text, hints := slacktext.NormalizeOutgoing(text, opts.raw)
+	cmdutil.PrintFormatHints(ios, hints)
+
+	if strings.Contains(text, "@") {
+		resolved, names, err := resolver.ResolveMentions(text)
+		if err == nil {
+			text = resolved
+			for _, name := range names {
+				fmt.Fprintf(ios.ErrOut, "Mentioning %s\n", cs.Bold("@"+name))
+			}
+		}
 	}
 
 	if _, err := slackapi.ChatUpdate(context.Background(), client.API, &slackapi.ChatUpdateParams{

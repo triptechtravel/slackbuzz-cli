@@ -173,20 +173,9 @@ func sendRun(opts *sendOptions) error {
 		return fmt.Errorf("message text cannot be empty")
 	}
 
-	// Strip common shell escape artifacts (e.g. zsh history expansion turns ! into \!)
-	text = unescapeShellArtifacts(text)
-
-	// Auto-convert Markdown → Slack mrkdwn (unless --raw)
-	if !opts.raw {
-		// Show formatting hints on stderr before converting
-		if hints := slacktext.DetectFormatHints(text); len(hints) > 0 {
-			fmt.Fprintf(ios.ErrOut, "%s Auto-converting Markdown → Slack mrkdwn\n", cs.Blue("→"))
-			for _, h := range hints {
-				fmt.Fprintf(ios.ErrOut, "  %s %s (%s)\n", cs.Yellow("⚡"), h.Issue, h.Example)
-			}
-		}
-		text = slacktext.ConvertMarkdownToMrkdwn(text)
-	}
+	// Shell unescape + Markdown→mrkdwn (unless --raw)
+	text, hints := slacktext.NormalizeOutgoing(text, opts.raw)
+	cmdutil.PrintFormatHints(ios, hints)
 
 	// Resolve @mentions in message body
 	if strings.Contains(text, "@") {
@@ -245,22 +234,6 @@ func resolveTargetUserID(r *api.Resolver, target string) string {
 		return ""
 	}
 	return id
-}
-
-// unescapeShellArtifacts removes common shell escape sequences that leak into
-// CLI arguments. For example, zsh's history expansion escapes ! as \! when
-// passed through double-quoted strings, and literal \n sequences appear when
-// users include newlines in quoted arguments.
-func unescapeShellArtifacts(text string) string {
-	// Protect escaped backslashes (\\) before processing other sequences
-	const placeholder = "\x00BACKSLASH\x00"
-	text = strings.ReplaceAll(text, `\\`, placeholder)
-	text = strings.ReplaceAll(text, `\!`, "!")
-	text = strings.ReplaceAll(text, `\?`, "?")
-	text = strings.ReplaceAll(text, `\n`, "\n")
-	text = strings.ReplaceAll(text, `\t`, "\t")
-	text = strings.ReplaceAll(text, placeholder, `\`)
-	return text
 }
 
 // maxBlockTextLen is Slack's limit for text in a single section block.

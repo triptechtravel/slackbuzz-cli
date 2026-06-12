@@ -7,6 +7,33 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.0]
+
+### Fixed
+
+- **`message edit` skipped the outgoing-text pipeline** — edited messages
+  were sent to `chat.update` verbatim, so Markdown arrived unconverted
+  (`**bold**` rendered literally), `@mentions` didn't ping, and shell
+  escape artifacts weren't stripped. Edits now go through the same
+  pipeline as `message send`.
+- **`notify --message` skipped Markdown→mrkdwn conversion and shell
+  unescape** (it did resolve mentions). Custom notification messages render
+  via mrkdwn blocks, so raw Markdown arrived broken. Now normalized like
+  `send`/`edit`.
+
+### Added
+
+- `message edit --raw` to disable Markdown→mrkdwn auto-conversion,
+  matching `message send --raw`.
+
+### Internal
+
+- Outgoing-text normalization (shell unescape + Markdown→mrkdwn + format
+  hints) consolidated into `internal/text.NormalizeOutgoing` and
+  `cmdutil.PrintFormatHints`, used by `send`, `edit`, and `notify` so the
+  pipeline can't drift between commands again. `unescapeShellArtifacts`
+  moved from `pkg/cmd/message` to `internal/text.UnescapeShellArtifacts`.
+
 ## [0.11.1]
 
 ### Fixed

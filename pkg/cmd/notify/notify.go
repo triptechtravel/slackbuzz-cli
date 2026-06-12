@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
 	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
+	slacktext "github.com/triptechtravel/slackbuzz-cli/internal/text"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -74,8 +75,17 @@ func notifyRun(opts *notifyOptions) error {
 		return err
 	}
 
-	// Resolve @mentions in custom message text
+	// Shell unescape + Markdown→mrkdwn, same pipeline as message send/edit.
+	// The custom message renders via mrkdwn section blocks, so raw Markdown
+	// (e.g. **bold**) would otherwise arrive broken.
 	message := opts.message
+	if message != "" {
+		var hints []slacktext.FormatHint
+		message, hints = slacktext.NormalizeOutgoing(message, false)
+		cmdutil.PrintFormatHints(ios, hints)
+	}
+
+	// Resolve @mentions in custom message text
 	if message != "" && strings.Contains(message, "@") {
 		resolved, names, resolveErr := resolver.ResolveMentions(message)
 		if resolveErr == nil {
