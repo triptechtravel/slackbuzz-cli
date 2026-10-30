@@ -65,7 +65,6 @@ var appManifest = map[string]interface{}{
 				"mpim:read",
 				"reactions:read",
 				"reactions:write",
-				"search:read",
 				"users:read",
 			},
 			"user": []string{

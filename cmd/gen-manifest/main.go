@@ -185,9 +185,18 @@ func findCalledMethods(cmdRoot string, goToAPI map[string]string) (map[string]bo
 
 // ─── scope union + bot/user split ──────────────────────────────────────────
 
+// userOnlyScopes are scopes Slack only grants to user tokens. The spec
+// lists them unqualified, but apps.manifest.create rejects the whole
+// manifest ("Illegal bot scopes found") if any appear on the bot side.
+var userOnlyScopes = map[string]bool{
+	"search:read": true,
+	"stars:read":  true,
+	"stars:write": true,
+}
+
 // classifyScopes splits a flat set of scopes into bot-side and user-side
 // lists, filtering Slack's :bot / :user qualifier suffixes. Scopes without
-// a qualifier go to both.
+// a qualifier go to both, except userOnlyScopes which go to user only.
 func classifyScopes(scopes []string) (bot, user []string) {
 	botSet := map[string]bool{}
 	userSet := map[string]bool{}
@@ -198,6 +207,8 @@ func classifyScopes(scopes []string) (bot, user []string) {
 			botSet[strings.TrimSuffix(s, ":bot")] = true
 		case strings.HasSuffix(s, ":user"):
 			userSet[strings.TrimSuffix(s, ":user")] = true
+		case userOnlyScopes[s]:
+			userSet[s] = true
 		default:
 			botSet[s] = true
 			userSet[s] = true
