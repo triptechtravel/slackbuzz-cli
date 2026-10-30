@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>slackbuzz — finishing sign-in</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 3rem 1rem; max-width: 36rem; line-height: 1.5; color: #1a1a2e; background: #fff; }
+  @media (prefers-color-scheme: dark) { body { color: #e8e8f0; background: #1a1a2e; } }
+</style>
+</head>
+<body>
+<p id="msg">Handing the sign-in back to slackbuzz…</p>
+<script>
+// Slack only allows HTTPS redirect URLs, so slackbuzz (`app create` /
+// `app update`) registers this page and passes its local callback port in
+// `state` ("<port>-<nonce>"; see newOAuthState in pkg/cmd/app/oauth.go).
+// Forward Slack's query string to that loopback listener. The code is only
+// redeemable with the app's client secret, which stays in the CLI.
+(function () {
+  var q = new URLSearchParams(location.search);
+  var m = /^(\d{4,5})-[0-9a-f]{32}$/.exec(q.get("state") || "");
+  var port = m && Number(m[1]);
+  if (!port || port < 1024 || port > 65535) {
+    document.getElementById("msg").textContent =
+      "This page finishes a slackbuzz sign-in, but the link is missing its state. Run the slackbuzz command again.";
+    return;
+  }
+  location.replace("http://127.0.0.1:" + port + "/callback" + location.search);
+})();
+</script>
+</body>
+</html>

@@ -2,21 +2,25 @@ package auth
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"sync"
 
 	"github.com/triptechtravel/slackbuzz-cli/internal/config"
 	"github.com/zalando/go-keyring"
 )
 
 const (
-	serviceName    = "slack-cli"
-	botTokenKey    = "bot_token"
-	userTokenKey   = "user_token"
-	teamIDKey      = "team_id"
-	teamNameKey    = "team_name"
-	userIDKey      = "user_id"
-	userNameKey    = "user_name"
-	botUserIDKey   = "bot_user_id"
-	botUserNameKey = "bot_user_name"
+	serviceName     = "slack-cli"
+	botTokenKey     = "bot_token"
+	userTokenKey    = "user_token"
+	teamIDKey       = "team_id"
+	teamNameKey     = "team_name"
+	userIDKey       = "user_id"
+	userNameKey     = "user_name"
+	botUserIDKey    = "bot_user_id"
+	botUserNameKey  = "bot_user_name"
+	clientSecretKey = "client_secret"
 )
 
 // StoreBotToken saves a bot token (xoxb-) to the OS keyring, falling back to plaintext.
@@ -24,6 +28,25 @@ func StoreBotToken(token string) error {
 	return storeKeyringValue(botTokenKey, token, func(ac *config.AuthConfig) {
 		ac.BotToken = token
 	})
+}
+
+// StoreClientSecret saves the app's OAuth client secret (used to re-run the
+// browser install) to the OS keyring, falling back to plaintext.
+func StoreClientSecret(secret string) error {
+	return storeKeyringValue(clientSecretKey, secret, func(ac *config.AuthConfig) {
+		ac.ClientSecret = secret
+	})
+}
+
+// GetClientSecret returns the stored OAuth client secret, or "" if none.
+func GetClientSecret() string {
+	s, err := getKeyringValue(clientSecretKey, func(ac *config.AuthConfig) string {
+		return ac.ClientSecret
+	})
+	if err != nil {
+		return ""
+	}
+	return s
 }
 
 // StoreUserToken saves a user token (xoxp-) to the OS keyring, falling back to plaintext.
@@ -184,9 +207,19 @@ func storeKeyringValue(key, value string, fallbackSetter func(*config.AuthConfig
 	if saveErr := ac.Save(); saveErr != nil {
 		return fmt.Errorf("failed to store token: keyring error: %w, file error: %v", err, saveErr)
 	}
-	fmt.Println("Warning: Could not use OS keyring. Token stored in plain text at", config.AuthFile())
+	plaintextWarning.Do(func() {
+		fmt.Fprintf(warnOut, "Note: no OS keyring available (common on WSL and headless Linux), so tokens are stored in plain text at %s (readable only by you).\n", config.AuthFile())
+	})
 	return nil
 }
+
+// plaintextWarning keeps the keyring fallback notice to once per process —
+// storing a bot and a user token in one run shouldn't print it twice.
+// warnOut is a var so tests can capture it.
+var (
+	plaintextWarning sync.Once
+	warnOut          io.Writer = os.Stderr
+)
 
 func getKeyringValue(key string, fallbackGetter func(*config.AuthConfig) string) (string, error) {
 	token, err := keyring.Get(serviceName, key)

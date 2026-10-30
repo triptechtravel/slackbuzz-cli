@@ -13,7 +13,19 @@ The easiest way to get started is to create a Slack app with all required scopes
 slackbuzz app create
 ```
 
-This creates a Slack app manifest, opens the Slack app creation page, and prompts you to paste the OAuth tokens after installing the app to your workspace.
+Paste an App Configuration Token when asked (from [api.slack.com/apps](https://api.slack.com/apps) → *Your App Configuration Tokens* → *Generate Token*). slackbuzz creates the app, then opens Slack in your browser — click **Allow** and both the bot and user tokens are stored automatically. Nothing else to copy.
+
+No config token? Create the app in the browser instead — Slack's app creator opens pre-filled, and you paste back the Client ID and Secret:
+
+```sh
+slackbuzz app create --web
+```
+
+No terminal prompt available (e.g. running from an AI agent's `!` shell)? Copy the config token, then:
+
+```sh
+slackbuzz app create --clipboard
+```
 
 ### Alternative: log in with existing tokens
 
@@ -27,11 +39,14 @@ You will be prompted to paste a bot token (`xoxb-...`) and optionally a user tok
 
 ### CI / non-interactive mode
 
-Pipe a token via stdin:
+Pipe a token via stdin, or read the one you just copied:
 
 ```sh
 echo "$SLACK_BOT_TOKEN" | slackbuzz auth login --with-token
+slackbuzz auth login --clipboard
 ```
+
+`app create` and `app update` also accept the config token via `--with-token`, `--clipboard`, or `$SLACKBUZZ_CONFIG_TOKEN`, checked in that order before any saved token. A token from `$SLACKBUZZ_CONFIG_TOKEN` overrides the saved one and is never written to disk.
 
 ### Check authentication status
 

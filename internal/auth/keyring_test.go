@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/triptechtravel/slackbuzz-cli/internal/config"
@@ -134,25 +135,25 @@ func TestKeyringFallbackWarning(t *testing.T) {
 	keyring.MockInitWithError(fmt.Errorf("keyring unavailable"))
 	setConfigDir(t)
 
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+	var buf bytes.Buffer
+	oldOut := warnOut
+	warnOut = &buf
+	plaintextWarning = sync.Once{}
+	t.Cleanup(func() { warnOut = oldOut })
 
 	if err := StoreBotToken("xoxb-test"); err != nil {
-		w.Close()
-		os.Stdout = oldStdout
 		t.Fatalf("StoreBotToken() error: %v", err)
 	}
+	if err := StoreUserToken("xoxp-test"); err != nil {
+		t.Fatalf("StoreUserToken() error: %v", err)
+	}
 
-	w.Close()
-	os.Stdout = oldStdout
-
-	var buf bytes.Buffer
-	_, _ = buf.ReadFrom(r)
 	output := buf.String()
-
 	if !strings.Contains(output, "plain text") {
 		t.Errorf("expected warning about plain text storage, got: %q", output)
+	}
+	if n := strings.Count(output, "plain text"); n != 1 {
+		t.Errorf("warning printed %d times, want once", n)
 	}
 }
 

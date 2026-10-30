@@ -13,8 +13,9 @@ type IOStreams struct {
 	Out    io.Writer
 	ErrOut io.Writer
 
-	colorEnabled bool
-	isTerminal   bool
+	colorEnabled    bool
+	isTerminal      bool
+	stdinIsTerminal bool
 }
 
 // System returns IOStreams connected to the standard OS streams.
@@ -23,11 +24,12 @@ func System() *IOStreams {
 	isTerm := term.IsTerminal(stdoutFd)
 
 	return &IOStreams{
-		In:           os.Stdin,
-		Out:          os.Stdout,
-		ErrOut:       os.Stderr,
-		colorEnabled: isTerm && os.Getenv("NO_COLOR") == "",
-		isTerminal:   isTerm,
+		In:              os.Stdin,
+		Out:             os.Stdout,
+		ErrOut:          os.Stderr,
+		colorEnabled:    isTerm && os.Getenv("NO_COLOR") == "",
+		isTerminal:      isTerm,
+		stdinIsTerminal: term.IsTerminal(int(os.Stdin.Fd())),
 	}
 }
 
@@ -48,6 +50,13 @@ func (s *IOStreams) ColorEnabled() bool {
 
 func (s *IOStreams) IsTerminal() bool {
 	return s.isTerminal
+}
+
+// CanPrompt reports whether interactive prompts can work: both stdout and
+// stdin must be terminals. Piping a token into stdin while stdout is a
+// terminal would otherwise "prompt" on an already-drained pipe.
+func (s *IOStreams) CanPrompt() bool {
+	return s.isTerminal && s.stdinIsTerminal
 }
 
 func (s *IOStreams) ColorScheme() *ColorScheme {

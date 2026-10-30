@@ -1,27 +1,27 @@
 package app
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
 	"github.com/triptechtravel/slackbuzz-cli/internal/browser"
-	"github.com/triptechtravel/slackbuzz-cli/internal/config"
 	"github.com/triptechtravel/slackbuzz-cli/internal/iostreams"
 	"github.com/triptechtravel/slackbuzz-cli/internal/prompter"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
 type createOptions struct {
-	factory   *cmdutil.Factory
-	withToken bool
+	factory *cmdutil.Factory
+	source  tokenSource
+	web     bool
 }
 
 // NewCmdCreate returns the "app create" command.
@@ -31,24 +31,41 @@ func NewCmdCreate(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new Slack app with required scopes",
-		Long: `Create a new Slack app pre-configured with all scopes needed by the CLI.
+		Long: `Create a new Slack app pre-configured with all scopes needed by the CLI,
+install it, and store its tokens.
 
-This command uses the Slack apps.manifest API to create an app. You need
-an App Configuration Token from: api.slack.com/apps > Your App Configuration Tokens.
+Two ways to create the app:
 
-After the app is created, it opens the install page in your browser.
-Once installed, copy the Bot and User OAuth tokens for 'slackbuzz auth login'.`,
-		Example: `  # Interactive (prompts for config token)
+  Config token (default) — paste an App Configuration Token from
+  api.slack.com/apps > Your App Configuration Tokens. The app is created
+  via the manifest API.
+
+  --web — no config token. Slack's "create from manifest" page opens
+  pre-filled; click Create, then paste the Client ID and Client Secret.
+
+Either way, Slack then opens in your browser: click Allow and both the bot
+and user tokens are stored automatically. No token copying.`,
+		Example: `  # Interactive
   slackbuzz app create
 
-  # Pipe config token for CI
-  echo "xoxe.xoxp-..." | slackbuzz app create --with-token`,
+  # Copy the config token, then (works without a terminal prompt)
+  slackbuzz app create --clipboard
+
+  # No config token: create the app in the browser
+  slackbuzz app create --web
+
+  # Scripted
+  echo "xoxe.xoxp-..." | slackbuzz app create --with-token
+  SLACKBUZZ_CONFIG_TOKEN=xoxe.xoxp-... slackbuzz app create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return createRun(opts)
 		},
 	}
 
-	cmd.Flags().BoolVar(&opts.withToken, "with-token", false, "Read config token from stdin")
+	cmd.Flags().BoolVar(&opts.source.withToken, "with-token", false, "Read config token from stdin")
+	cmd.Flags().BoolVar(&opts.source.fromClipboard, "clipboard", false, "Read config token from the system clipboard")
+	cmd.Flags().BoolVar(&opts.web, "web", false, "Create the app in the browser instead of with a config token")
+	cmd.MarkFlagsMutuallyExclusive("with-token", "clipboard", "web")
 
 	return cmd
 }
@@ -57,45 +74,43 @@ func createRun(opts *createOptions) error {
 	ios := opts.factory.IOStreams
 	cs := ios.ColorScheme()
 
-	// Get config token — check saved token first
-	var configToken string
-
-	ac, _ := config.LoadAuth()
-	if ac.ConfigToken != "" && !opts.withToken {
-		configToken = ac.ConfigToken
-		fmt.Fprintf(ios.Out, "Using saved config token (from %s)\n", config.AuthFile())
-	} else if opts.withToken {
-		scanner := bufio.NewScanner(ios.In)
-		if !scanner.Scan() {
-			return fmt.Errorf("failed to read config token from stdin")
-		}
-		configToken = strings.TrimSpace(scanner.Text())
-	} else {
-		fmt.Fprintln(ios.Out, "To create a Slack app, you need an App Configuration Token.")
-		fmt.Fprintln(ios.Out, "Where to find it:")
-		fmt.Fprintf(ios.Out, "  1. Go to %s (the apps LIST page)\n", cs.Cyan("https://api.slack.com/apps"))
-		fmt.Fprintln(ios.Out, "  2. Scroll to the bottom — section is titled \"Your App Configuration Tokens\"")
-		fmt.Fprintln(ios.Out, "  3. Click \"Generate Token\" next to your workspace, copy the Access Token (xoxe.xoxp-...)")
-		fmt.Fprintln(ios.Out, "  Note: this is a workspace-level admin token — NOT inside any individual app's credentials.")
-		fmt.Fprintln(ios.Out)
-
-		p := prompter.New(ios)
-		var err error
-		configToken, err = p.Password("Paste your App Configuration Token:")
-		if err != nil {
-			return fmt.Errorf("could not read token: %w", err)
-		}
-		configToken = strings.TrimSpace(configToken)
+	ac, err := loadAuth()
+	if err != nil {
+		return err
 	}
 
-	if configToken == "" {
-		return fmt.Errorf("config token cannot be empty")
+	if opts.web {
+		return createViaWeb(ios, cs)
+	}
+
+	configToken, save, err := configTokenFrom(ios, opts.source, ac)
+	if errors.Is(err, errNoConfigToken) {
+		if !ios.CanPrompt() {
+			return nonInteractiveTokenHelp()
+		}
+		idx, perr := prompter.New(ios).Select("How do you want to create the Slack app?", []string{
+			"Paste an App Configuration Token (fastest)",
+			"Create it in the browser (no config token)",
+		})
+		if perr != nil {
+			return perr
+		}
+		if idx == 1 {
+			return createViaWeb(ios, cs)
+		}
+		configToken, err = promptConfigToken(ios, cs)
+		save = true
+	}
+	if err != nil {
+		return err
 	}
 
 	// Save the config token immediately so it's not lost if the API call fails
-	ac.ConfigToken = configToken
-	if err := ac.Save(); err != nil {
-		fmt.Fprintf(ios.ErrOut, "Warning: could not save config token: %v\n", err)
+	if save {
+		ac.ConfigToken = configToken
+		if err := ac.Save(); err != nil {
+			fmt.Fprintf(ios.ErrOut, "Warning: could not save config token: %v\n", err)
+		}
 	}
 
 	fmt.Fprintln(ios.Out, "Creating Slack app...")
@@ -150,114 +165,65 @@ func createRun(opts *createOptions) error {
 	fmt.Fprintf(ios.Out, "  %-16s %s\n", cs.Bold("Client ID:"), result.Credentials.ClientID)
 
 	// Persist the AppID so `slackbuzz app update` can target this app later
-	// without re-prompting.
-	ac.AppID = result.AppID
-	if saveErr := ac.Save(); saveErr != nil {
-		fmt.Fprintf(ios.ErrOut, "Warning: could not save app ID: %v\n", saveErr)
-	}
+	// without re-prompting, and the client credentials so it can re-run the
+	// browser install. They come straight from Slack, so save them now —
+	// even if the install below fails.
+	app := oauthApp{ClientID: result.Credentials.ClientID, ClientSecret: result.Credentials.ClientSecret}
+	saveClientCredentials(ios, result.AppID, app.ClientID, app.ClientSecret)
 
-	// Open the app install page
-	installURL := fmt.Sprintf("https://api.slack.com/apps/%s/install-on-team", result.AppID)
-	fmt.Fprintf(ios.Out, "\n%s Opening install page in your browser...\n", cs.Blue("→"))
-	fmt.Fprintf(ios.Out, "  %s\n\n", installURL)
-	_ = browser.Open(installURL)
-
-	fmt.Fprintln(ios.Out, "Install the app to your workspace, then come back here to paste the tokens.")
-	fmt.Fprintln(ios.Out)
-
-	// Prompt for tokens inline — auto-detect type from prefix
-	p := prompter.New(ios)
-	storedBot := false
-	storedUser := false
-
-	oauthURL := fmt.Sprintf("https://api.slack.com/apps/%s/oauth", result.AppID)
-	fmt.Fprintln(ios.Out, cs.Bold("After installing, grab the OAuth tokens from the OAuth & Permissions page:"))
-	fmt.Fprintf(ios.Out, "  %s\n", cs.Cyan(oauthURL))
-	fmt.Fprintln(ios.Out, "  • Bot User OAuth Token (xoxb-...) — top of page")
-	fmt.Fprintln(ios.Out, "  • User OAuth Token (xoxp-...) — just below it")
-	fmt.Fprintln(ios.Out, "Token type is auto-detected from prefix.")
-	fmt.Fprintln(ios.Out)
-
-	// First token (required — bot token)
-	token1, err := p.Password("Paste your first token:")
-	if err != nil {
-		fmt.Fprintln(ios.ErrOut, "Skipping tokens. You can add them later with: slackbuzz auth login")
-	} else {
-		token1 = strings.TrimSpace(token1)
-		if token1 != "" {
-			storedBot, storedUser = storeDetectedToken(ios, cs, token1, storedBot, storedUser)
-		}
-	}
-
-	// Second token (optional — user token for search)
-	if !storedBot || !storedUser {
-		missing := "user (xoxp-)"
-		if !storedBot {
-			missing = "bot (xoxb-)"
-		}
-		fmt.Fprintf(ios.Out, "(Optional) Paste your %s token for full functionality:\n", missing)
-		for {
-			token2, err := p.Password("Token (enter to skip):")
-			if err != nil {
-				break
-			}
-			token2 = strings.TrimSpace(token2)
-			if token2 == "" {
-				break
-			}
-			// Re-pasting the first token (stale clipboard) would silently
-			// overwrite it and leave the other side unset.
-			if (storedBot && auth.IsBotToken(token2)) || (storedUser && auth.IsUserToken(token2)) {
-				fmt.Fprintf(ios.ErrOut, "That's the same token type as the first one — expected a %s token. Check your clipboard and try again.\n", missing)
-				continue
-			}
-			// Last token in the flow — store it for its side effect; the
-			// returned flags aren't read again before we return.
-			_, _ = storeDetectedToken(ios, cs, token2, storedBot, storedUser)
-			break
-		}
-	}
+	installApp(ios, cs, result.AppID, app, false)
 
 	fmt.Fprintf(ios.Out, "%s Setup complete! Try: %s\n", cs.Green("✓"), cs.Cyan("slackbuzz channel list"))
-
 	return nil
 }
 
-// storeDetectedToken validates and stores a token based on its detected type (xoxb- or xoxp-).
-// Returns updated storedBot, storedUser flags.
-func storeDetectedToken(ios *iostreams.IOStreams, cs *iostreams.ColorScheme, token string, storedBot, storedUser bool) (bool, bool) {
-	tokenType := auth.DetectTokenType(token)
-	if tokenType == "unknown" {
-		fmt.Fprintf(ios.ErrOut, "Warning: unrecognized token prefix. Expected xoxb- (bot) or xoxp- (user). Skipping.\n")
-		return storedBot, storedUser
+// createViaWeb creates the app without a config token: Slack's "create from
+// manifest" page opens pre-filled, and the user copies back the client
+// credentials so the OAuth install can finish the job.
+func createViaWeb(ios *iostreams.IOStreams, cs *iostreams.ColorScheme) error {
+	if !ios.CanPrompt() {
+		return fmt.Errorf("--web needs a terminal to paste the Client ID and Secret into — run it in your own terminal")
 	}
-
-	info, err := auth.ValidateToken(token)
+	createURL, err := manifestCreateURL()
 	if err != nil {
-		fmt.Fprintf(ios.ErrOut, "Warning: token validation failed: %v\n", err)
-		return storedBot, storedUser
+		return err
 	}
 
-	if tokenType == "bot" {
-		if storeErr := auth.StoreBotToken(token); storeErr != nil {
-			fmt.Fprintf(ios.ErrOut, "Warning: failed to store bot token: %v\n", storeErr)
-		} else {
-			_ = auth.StoreTeamInfo(info.TeamID, info.Team)
-			_ = auth.StoreBotUserInfo(info.UserID, info.User)
-			fmt.Fprintf(ios.Out, "%s Bot token saved (%s on %s)\n\n", cs.Green("✓"), cs.Bold(info.User), cs.Bold(info.Team))
-			storedBot = true
-		}
-	} else {
-		if storeErr := auth.StoreUserToken(token); storeErr != nil {
-			fmt.Fprintf(ios.ErrOut, "Warning: failed to store user token: %v\n", storeErr)
-		} else {
-			_ = auth.StoreUserInfo(info.UserID, info.User)
-			fmt.Fprintf(ios.Out, "%s User token saved (%s)\n\n", cs.Green("✓"), cs.Bold(info.User))
-			storedUser = true
-		}
+	fmt.Fprintf(ios.Out, "%s Opening Slack's app creator, pre-filled with the slackbuzz manifest.\n", cs.Blue("→"))
+	fmt.Fprintln(ios.Out, "  1. Pick your workspace, click Next, then Create")
+	fmt.Fprintln(ios.Out, "  2. You'll land on Basic Information — under App Credentials, copy the Client ID, then click Show and copy the Client Secret")
+	fmt.Fprintf(ios.Out, "  If the page doesn't open, visit:\n  %s\n\n", createURL)
+	_ = browser.Open(createURL)
+
+	p := prompter.New(ios)
+	clientID, err := p.Input("Client ID:", "")
+	if err != nil {
+		return fmt.Errorf("could not read client ID: %w", err)
+	}
+	clientSecret, err := p.Password("Client Secret:")
+	if err != nil {
+		return fmt.Errorf("could not read client secret: %w", err)
+	}
+	clientID, clientSecret = strings.TrimSpace(clientID), strings.TrimSpace(clientSecret)
+	if clientID == "" || clientSecret == "" {
+		return fmt.Errorf("client ID and secret are both required")
 	}
 
-	return storedBot, storedUser
+	// Credentials are typed by hand, so they're saved only once Slack
+	// accepts them; installApp falls back to pasting tokens otherwise.
+	installApp(ios, cs, "", oauthApp{ClientID: clientID, ClientSecret: clientSecret}, true)
+
+	fmt.Fprintf(ios.Out, "%s Setup complete! Try: %s\n", cs.Green("✓"), cs.Cyan("slackbuzz auth status"))
+	return nil
+}
+
+// manifestCreateURL is Slack's "create app from manifest" link, pre-filled.
+func manifestCreateURL() (string, error) {
+	manifestJSON, err := json.Marshal(appManifest)
+	if err != nil {
+		return "", fmt.Errorf("failed to encode manifest: %w", err)
+	}
+	return "https://api.slack.com/apps?new_app=1&manifest_json=" + url.QueryEscape(string(manifestJSON)), nil
 }
 
 type manifestCreateResponse struct {

@@ -7,6 +7,48 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`app create` / `app update` install via OAuth** — after the app is
+  created (or its manifest pushed), Slack opens in the browser; click
+  Allow and both tokens are stored. No more copying tokens from OAuth &
+  Permissions. Slack requires HTTPS redirect URLs, so the manifest
+  registers a static relay page on the docs site (`/oauth/callback/`)
+  that forwards the code to a `127.0.0.1` listener; the listener's port
+  rides in `state`. If the flow fails or times out, it falls back to
+  pasting whichever token is still missing. The client ID is saved (and
+  the client secret, in the keyring when available) so `app update` can
+  reinstall the same way; apps created earlier are asked for them once,
+  and typed credentials are only saved after Slack accepts them.
+- **`app create --web`** — no App Configuration Token needed: opens
+  Slack's create-from-manifest page pre-filled, then asks for the Client
+  ID and Secret and finishes with the OAuth install.
+- **`--clipboard`** on `app create`, `app update` and `auth login` reads
+  the token from the system clipboard (pbpaste; PowerShell then WSLg
+  tools on WSL; wl-paste/xclip/xsel), so setup works without a TTY —
+  e.g. from an AI agent's `!` shell. `$SLACKBUZZ_CONFIG_TOKEN` is also
+  honoured; it overrides a saved config token and is never saved.
+  Without a TTY or token source, commands now say how to supply one
+  instead of failing with "cannot prompt in non-interactive mode".
+
+### Changed
+
+- **`app update` now replaces the app's Redirect URLs** with the
+  slackbuzz relay page (the manifest is pushed whole). Re-add any custom
+  ones afterwards.
+- Config tokens are checked for the `xoxe.xoxp-` prefix from every
+  source, catching a pasted refresh token or bot/user token early.
+- Prompts require stdin to be a terminal too, so `echo tok | slackbuzz
+  app update --with-token` no longer "prompts" on a drained pipe.
+- A corrupt `auth.yml` is reported instead of being silently replaced
+  (which dropped any plaintext-fallback tokens). The file is re-chmodded
+  to 0600 on every save and its directory created 0700.
+- Manual token paste (fallback, and `app update`) loops until both
+  tokens are stored or you skip, and re-prompts on a repeated token type.
+- Browser links open on WSL via Windows' URL handler (then `wslview`)
+  instead of `xdg-open`.
+- The plain-text token storage notice prints once per run, on stderr.
+
 ## [0.12.1]
 
 ### Fixed

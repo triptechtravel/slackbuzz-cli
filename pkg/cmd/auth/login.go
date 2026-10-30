@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
+	"github.com/triptechtravel/slackbuzz-cli/internal/clipboard"
 	"github.com/triptechtravel/slackbuzz-cli/internal/prompter"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
@@ -16,6 +17,7 @@ type loginOptions struct {
 	botToken  bool
 	userToken bool
 	withToken bool // read from stdin (CI)
+	clipboard bool // read from the system clipboard
 }
 
 // NewCmdLogin returns the "auth login" command.
@@ -39,13 +41,19 @@ type and it will be stored correctly.
 Get tokens from your Slack App: api.slack.com/apps > OAuth & Permissions.
 
 In non-interactive environments (CI), pipe a token via stdin:
-  echo "xoxb-..." | slackbuzz auth login --with-token`,
+  echo "xoxb-..." | slackbuzz auth login --with-token
+
+Or copy the token and read it from the clipboard (no terminal prompt needed):
+  slackbuzz auth login --clipboard`,
 		Example: `  # Interactive (auto-detects token type)
   slackbuzz auth login
 
   # Hint which type you're providing
   slackbuzz auth login --bot-token
   slackbuzz auth login --user-token
+
+  # Read the token you just copied
+  slackbuzz auth login --clipboard
 
   # Pipe token for CI
   echo "xoxb-..." | slackbuzz auth login --with-token`,
@@ -57,6 +65,8 @@ In non-interactive environments (CI), pipe a token via stdin:
 	cmd.Flags().BoolVar(&opts.botToken, "bot-token", false, "Hint: storing a bot token (xoxb-)")
 	cmd.Flags().BoolVar(&opts.userToken, "user-token", false, "Hint: storing a user token (xoxp-)")
 	cmd.Flags().BoolVar(&opts.withToken, "with-token", false, "Read token from standard input (for CI)")
+	cmd.Flags().BoolVar(&opts.clipboard, "clipboard", false, "Read token from the system clipboard")
+	cmd.MarkFlagsMutuallyExclusive("with-token", "clipboard")
 
 	return cmd
 }
@@ -67,7 +77,13 @@ func loginRun(opts *loginOptions) error {
 
 	var token string
 
-	if opts.withToken {
+	if opts.clipboard {
+		var err error
+		token, err = clipboard.Read()
+		if err != nil {
+			return fmt.Errorf("could not read token from clipboard: %w", err)
+		}
+	} else if opts.withToken {
 		// Read token from stdin (CI mode)
 		scanner := bufio.NewScanner(ios.In)
 		if !scanner.Scan() {
@@ -78,6 +94,9 @@ func loginRun(opts *loginOptions) error {
 			return fmt.Errorf("token cannot be empty")
 		}
 	} else {
+		if !ios.CanPrompt() {
+			return fmt.Errorf("no terminal to prompt on. Copy the token and use --clipboard, or pipe it with --with-token")
+		}
 		// Interactive token entry
 		hint := "bot or user"
 		if opts.botToken {

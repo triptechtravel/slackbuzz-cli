@@ -89,7 +89,7 @@ The fastest way is to use the built-in command:
 slackbuzz app create
 ```
 
-This creates a Slack app pre-configured with all required scopes for both token types, opens the install page in your browser, and prompts you to paste the OAuth tokens.
+This creates a Slack app pre-configured with all required scopes for both token types, then opens Slack in your browser — click **Allow** and both tokens are stored. Use `slackbuzz app create --web` if you don't have an App Configuration Token.
 
 ### Share with your team
 

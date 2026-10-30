@@ -60,7 +60,7 @@ Create a Slack app with all required scopes:
 slackbuzz app create
 ```
 
-This creates a Slack app, opens the install page, and prompts you to paste the OAuth tokens. Alternatively, log in with existing tokens:
+Paste an App Configuration Token when asked; slackbuzz creates the app and opens Slack in your browser — click **Allow** and both tokens are stored. No config token? Use `slackbuzz app create --web` to create the app from a pre-filled Slack page instead. Alternatively, log in with existing tokens:
 
 ```sh
 slackbuzz auth login
@@ -182,7 +182,7 @@ SlackBuzz uses two types of Slack tokens. **The CLI automatically selects the co
 
 Messages post as the authenticated user by default. Pass `--as-bot` on `message send`, `edit`, or `delete` to post as the bot app instead. When sending a DM to yourself, the CLI automatically switches to the bot so you receive a notification.
 
-The `slackbuzz app create` command creates a Slack app pre-configured with all required scopes for both token types. After installing the app to your workspace, paste both tokens when prompted.
+The `slackbuzz app create` command creates a Slack app pre-configured with all required scopes for both token types, then installs it through Slack's OAuth flow — click **Allow** in the browser and both tokens are stored. (Slack only accepts HTTPS redirect URLs, so the redirect goes via a static relay page on the docs site that hands the code back to the CLI on `127.0.0.1`; the code is only redeemable with your app's client secret, which never leaves your machine.)
 
 ### Required scopes
 

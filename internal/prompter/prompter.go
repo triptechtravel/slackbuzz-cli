@@ -19,7 +19,7 @@ func New(ios *iostreams.IOStreams) *Prompter {
 
 // Input prompts for text input.
 func (p *Prompter) Input(message, defaultValue string) (string, error) {
-	if !p.ios.IsTerminal() {
+	if !p.ios.CanPrompt() {
 		return "", fmt.Errorf("cannot prompt in non-interactive mode")
 	}
 	var result string
@@ -32,7 +32,7 @@ func (p *Prompter) Input(message, defaultValue string) (string, error) {
 
 // Password prompts for secret input (hidden).
 func (p *Prompter) Password(message string) (string, error) {
-	if !p.ios.IsTerminal() {
+	if !p.ios.CanPrompt() {
 		return "", fmt.Errorf("cannot prompt in non-interactive mode")
 	}
 	var result string
@@ -44,7 +44,7 @@ func (p *Prompter) Password(message string) (string, error) {
 
 // Select prompts the user to choose from a list.
 func (p *Prompter) Select(message string, options []string) (int, error) {
-	if !p.ios.IsTerminal() {
+	if !p.ios.CanPrompt() {
 		return -1, fmt.Errorf("cannot prompt in non-interactive mode")
 	}
 	var idx int
@@ -57,7 +57,7 @@ func (p *Prompter) Select(message string, options []string) (int, error) {
 
 // Confirm prompts for a yes/no answer.
 func (p *Prompter) Confirm(message string, defaultValue bool) (bool, error) {
-	if !p.ios.IsTerminal() {
+	if !p.ios.CanPrompt() {
 		return false, fmt.Errorf("cannot prompt in non-interactive mode")
 	}
 	var result bool
@@ -70,7 +70,7 @@ func (p *Prompter) Confirm(message string, defaultValue bool) (bool, error) {
 
 // Editor opens the user's editor for multi-line input.
 func (p *Prompter) Editor(message, defaultValue, filename string) (string, error) {
-	if !p.ios.IsTerminal() {
+	if !p.ios.CanPrompt() {
 		return "", fmt.Errorf("cannot prompt in non-interactive mode")
 	}
 	var result string
@@ -86,7 +86,7 @@ func (p *Prompter) Editor(message, defaultValue, filename string) (string, error
 
 // MultiSelect prompts the user to choose multiple items from a list.
 func (p *Prompter) MultiSelect(message string, options []string) ([]int, error) {
-	if !p.ios.IsTerminal() {
+	if !p.ios.CanPrompt() {
 		return nil, fmt.Errorf("cannot prompt in non-interactive mode")
 	}
 	var indices []int

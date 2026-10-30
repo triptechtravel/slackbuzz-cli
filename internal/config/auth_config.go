@@ -9,16 +9,18 @@ import (
 
 // AuthConfig stores authentication state on disk as a fallback when the OS keyring is unavailable.
 type AuthConfig struct {
-	BotToken    string `yaml:"bot_token,omitempty"`
-	UserToken   string `yaml:"user_token,omitempty"`
-	ConfigToken string `yaml:"config_token,omitempty"` // App configuration token for manifest API
-	AppID       string `yaml:"app_id,omitempty"`       // Slack app ID, set after `app create`
-	TeamID      string `yaml:"team_id,omitempty"`
-	TeamName    string `yaml:"team_name,omitempty"`
-	UserID      string `yaml:"user_id,omitempty"`       // Human user ID (from user token)
-	UserName    string `yaml:"user_name,omitempty"`     // Human username (from user token)
-	BotUserID   string `yaml:"bot_user_id,omitempty"`   // Bot user ID (from bot token)
-	BotUserName string `yaml:"bot_user_name,omitempty"` // Bot username (from bot token)
+	BotToken     string `yaml:"bot_token,omitempty"`
+	UserToken    string `yaml:"user_token,omitempty"`
+	ConfigToken  string `yaml:"config_token,omitempty"`  // App configuration token for manifest API
+	AppID        string `yaml:"app_id,omitempty"`        // Slack app ID, set after `app create`
+	ClientID     string `yaml:"client_id,omitempty"`     // App OAuth client ID, for browser-based install
+	ClientSecret string `yaml:"client_secret,omitempty"` // App OAuth client secret — keyring fallback only, see auth.StoreClientSecret
+	TeamID       string `yaml:"team_id,omitempty"`
+	TeamName     string `yaml:"team_name,omitempty"`
+	UserID       string `yaml:"user_id,omitempty"`       // Human user ID (from user token)
+	UserName     string `yaml:"user_name,omitempty"`     // Human username (from user token)
+	BotUserID    string `yaml:"bot_user_id,omitempty"`   // Bot user ID (from bot token)
+	BotUserName  string `yaml:"bot_user_name,omitempty"` // Bot username (from bot token)
 }
 
 // AuthFile returns the path to the auth config file.
@@ -47,7 +49,7 @@ func LoadAuth() (*AuthConfig, error) {
 // Save writes the auth config to disk.
 func (a *AuthConfig) Save() error {
 	dir := ConfigDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
 
@@ -56,7 +58,12 @@ func (a *AuthConfig) Save() error {
 		return err
 	}
 
-	return os.WriteFile(AuthFile(), data, 0o600)
+	if err := os.WriteFile(AuthFile(), data, 0o600); err != nil {
+		return err
+	}
+	// WriteFile only applies the mode when creating; tighten a file that
+	// predates this (it now also holds client credentials).
+	return os.Chmod(AuthFile(), 0o600)
 }
 
 // Clear removes the stored auth config.

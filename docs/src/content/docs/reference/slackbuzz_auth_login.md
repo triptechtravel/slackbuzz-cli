@@ -23,6 +23,9 @@ Get tokens from your Slack App: api.slack.com/apps > OAuth & Permissions.
 In non-interactive environments (CI), pipe a token via stdin:
   echo "xoxb-..." | slackbuzz auth login --with-token
 
+Or copy the token and read it from the clipboard (no terminal prompt needed):
+  slackbuzz auth login --clipboard
+
 ```
 slackbuzz auth login [flags]
 ```
@@ -37,6 +40,9 @@ slackbuzz auth login [flags]
   slackbuzz auth login --bot-token
   slackbuzz auth login --user-token
 
+  # Read the token you just copied
+  slackbuzz auth login --clipboard
+
   # Pipe token for CI
   echo "xoxb-..." | slackbuzz auth login --with-token
 ```
@@ -45,6 +51,7 @@ slackbuzz auth login [flags]
 
 ```
       --bot-token    Hint: storing a bot token (xoxb-)
+      --clipboard    Read token from the system clipboard
   -h, --help         help for login
       --user-token   Hint: storing a user token (xoxp-)
       --with-token   Read token from standard input (for CI)

@@ -312,6 +312,16 @@ var manifestTmpl = template.Must(template.New("manifest").Parse(`// Code generat
 
 package app
 
+// botScopes and userScopes feed both the manifest below and the scopes
+// the OAuth install flow (oauth.go) requests.
+var botScopes = []string{
+{{range .BotScopes}}	{{printf "%q" .}},
+{{end}}}
+
+var userScopes = []string{
+{{range .UserScopes}}	{{printf "%q" .}},
+{{end}}}
+
 // appManifest is the canonical Slack app manifest used by ` + "`app create`" + `
 // and ` + "`app update`" + `. The two consumer commands compose it as a JSON
 // payload to apps.manifest.{create,update}.
@@ -332,13 +342,10 @@ var appManifest = map[string]interface{}{
 		},
 	},
 	"oauth_config": map[string]interface{}{
+		"redirect_urls": []string{oauthRedirectURL},
 		"scopes": map[string]interface{}{
-			"bot": []string{
-{{range .BotScopes}}				{{printf "%q" .}},
-{{end}}			},
-			"user": []string{
-{{range .UserScopes}}				{{printf "%q" .}},
-{{end}}			},
+			"bot":  botScopes,
+			"user": userScopes,
 		},
 	},
 	"settings": map[string]interface{}{

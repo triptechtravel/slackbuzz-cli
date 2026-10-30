@@ -14,6 +14,10 @@ Update the text of an existing Slack message.
 The channel argument accepts #channel-name or a channel ID.
 If new-text is omitted, reads from stdin (for piping).
 
+The new text goes through the same pipeline as message send: standard
+Markdown (**bold**, # headers, [links](url)) is converted to Slack mrkdwn
+and @mentions are resolved. Use --raw to disable the Markdown conversion.
+
 ```
 slackbuzz message edit <channel> <timestamp> [new-text] [flags]
 ```
@@ -35,6 +39,7 @@ slackbuzz message edit <channel> <timestamp> [new-text] [flags]
   -h, --help              help for edit
       --jq string         Filter JSON output using a jq expression
       --json              Output JSON
+      --raw               Disable Markdown→mrkdwn auto-conversion
       --template string   Format JSON output using a Go template
 ```
 

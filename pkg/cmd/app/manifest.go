@@ -14,6 +14,49 @@
 
 package app
 
+// botScopes and userScopes feed both the manifest below and the scopes
+// the OAuth install flow (oauth.go) requests.
+var botScopes = []string{
+	"channels:history",
+	"channels:read",
+	"chat:write",
+	"emoji:read",
+	"files:read",
+	"files:write",
+	"groups:history",
+	"groups:read",
+	"im:history",
+	"im:read",
+	"mpim:history",
+	"mpim:read",
+	"reactions:read",
+	"reactions:write",
+	"users:read",
+}
+
+var userScopes = []string{
+	"channels:history",
+	"channels:read",
+	"chat:write",
+	"files:read",
+	"files:write",
+	"groups:history",
+	"groups:read",
+	"im:history",
+	"im:read",
+	"im:write",
+	"mpim:history",
+	"mpim:read",
+	"reactions:read",
+	"reactions:write",
+	"search:read",
+	"stars:read",
+	"stars:write",
+	"users.profile:read",
+	"users.profile:write",
+	"users:read",
+}
+
 // appManifest is the canonical Slack app manifest used by `app create`
 // and `app update`. The two consumer commands compose it as a JSON
 // payload to apps.manifest.{create,update}.
@@ -49,46 +92,10 @@ var appManifest = map[string]interface{}{
 		},
 	},
 	"oauth_config": map[string]interface{}{
+		"redirect_urls": []string{oauthRedirectURL},
 		"scopes": map[string]interface{}{
-			"bot": []string{
-				"channels:history",
-				"channels:read",
-				"chat:write",
-				"emoji:read",
-				"files:read",
-				"files:write",
-				"groups:history",
-				"groups:read",
-				"im:history",
-				"im:read",
-				"mpim:history",
-				"mpim:read",
-				"reactions:read",
-				"reactions:write",
-				"users:read",
-			},
-			"user": []string{
-				"channels:history",
-				"channels:read",
-				"chat:write",
-				"files:read",
-				"files:write",
-				"groups:history",
-				"groups:read",
-				"im:history",
-				"im:read",
-				"im:write",
-				"mpim:history",
-				"mpim:read",
-				"reactions:read",
-				"reactions:write",
-				"search:read",
-				"stars:read",
-				"stars:write",
-				"users.profile:read",
-				"users.profile:write",
-				"users:read",
-			},
+			"bot":  botScopes,
+			"user": userScopes,
 		},
 	},
 	"settings": map[string]interface{}{

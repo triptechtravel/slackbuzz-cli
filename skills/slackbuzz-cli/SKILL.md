@@ -18,17 +18,23 @@ Use the `slackbuzz` CLI instead of raw Slack API calls. It handles authenticatio
 ## Authentication
 
 ```bash
-slackbuzz app create     # Create a new Slack app with the required scopes
+slackbuzz app create     # Create a Slack app, then click Allow in the browser — tokens stored automatically
+slackbuzz app create --web  # Same, without an App Configuration Token (needs the user's own terminal)
 slackbuzz app update     # Push the latest scope set to an existing app + re-auth
 slackbuzz auth login     # Log in with bot and/or user token (manual paste)
 slackbuzz auth status    # Check auth status and capabilities
 ```
 
+Agent shells usually have no TTY, so token prompts fail. Have the user copy
+the token and run `slackbuzz app create --clipboard` (or `auth login
+--clipboard`) — or ask them to run the interactive command in their own
+terminal. Never ask the user to paste a token into the chat.
+
 **`app update` flow** — use when slackbuzz gains new scope requirements
 (e.g. a future command needs a scope the existing manifest doesn't grant).
 Pushes the canonical manifest to your existing app via `apps.manifest.update`,
-opens the install page so you can approve the new scopes, then prompts for
-the regenerated bot + user tokens. The manifest is auto-derived from method
+then reinstalls via the browser OAuth flow (click Allow; new tokens are
+stored automatically — falls back to pasting them). The manifest is auto-derived from method
 usage (`make manifest-gen` runs in CI), so the scope list never drifts from
 what commands actually need.
 

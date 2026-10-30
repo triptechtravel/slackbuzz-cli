@@ -1,9 +1,9 @@
 package app
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/triptechtravel/slackbuzz-cli/internal/browser"
-	"github.com/triptechtravel/slackbuzz-cli/internal/config"
+	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
+	"github.com/triptechtravel/slackbuzz-cli/internal/iostreams"
 	"github.com/triptechtravel/slackbuzz-cli/internal/prompter"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
@@ -20,7 +20,7 @@ import (
 type updateOptions struct {
 	factory       *cmdutil.Factory
 	appID         string
-	withToken     bool
+	source        tokenSource
 	skipReinstall bool
 }
 
@@ -33,9 +33,9 @@ type updateOptions struct {
 // Flow mirrors `app create`:
 //
 //  1. Push the latest manifest
-//  2. Open the install/reinstall page
-//  3. Prompt for new bot + user tokens
-//  4. Validate + store
+//  2. Reinstall via the browser OAuth flow (or paste tokens if the app's
+//     client credentials aren't saved)
+//  3. Validate + store
 //
 // Use it whenever the CLI's required scopes have grown (e.g. adding
 // `im:history` to the user side so `message list @user` works).
@@ -46,17 +46,25 @@ func NewCmdUpdate(f *cmdutil.Factory) *cobra.Command {
 		Use:   "update",
 		Short: "Push the latest scope manifest and re-authenticate",
 		Long: `Update an existing Slack app's manifest with the CLI's current scope set,
-then walk through reinstall + new tokens. Use this after the CLI gains new
+then reinstall it and store new tokens. Use this after the CLI gains new
 scope requirements (e.g. extending DM read support).
 
 The command uses your saved App Configuration Token and App ID. If neither is
-saved, you'll be prompted, or pass --app-id and pipe the config token via stdin
-with --with-token.`,
+saved, you'll be prompted, or pass --app-id and supply the config token with
+--clipboard, --with-token (stdin) or $SLACKBUZZ_CONFIG_TOKEN.
+
+Reinstalling opens Slack in your browser — click Allow and the new tokens are
+stored automatically. Apps made before this flow existed don't have their
+Client ID and Secret saved; you'll be asked for them once (Basic Information >
+App Credentials), or can press enter to paste tokens instead.`,
 		Example: `  # Interactive (uses saved app ID + config token)
   slackbuzz app update
 
   # Specify the app ID explicitly
   slackbuzz app update --app-id A0123456789
+
+  # Copy the config token, then
+  slackbuzz app update --clipboard
 
   # CI / scripted (config token via stdin)
   echo "xoxe.xoxp-..." | slackbuzz app update --with-token --app-id A0123456789`,
@@ -66,7 +74,9 @@ with --with-token.`,
 	}
 
 	cmd.Flags().StringVar(&opts.appID, "app-id", "", "Slack app ID to update (defaults to saved value from `app create`)")
-	cmd.Flags().BoolVar(&opts.withToken, "with-token", false, "Read App Configuration Token from stdin")
+	cmd.Flags().BoolVar(&opts.source.withToken, "with-token", false, "Read App Configuration Token from stdin")
+	cmd.Flags().BoolVar(&opts.source.fromClipboard, "clipboard", false, "Read App Configuration Token from the system clipboard")
+	cmd.MarkFlagsMutuallyExclusive("with-token", "clipboard")
 	cmd.Flags().BoolVar(&opts.skipReinstall, "skip-reinstall", false, "Skip opening the reinstall page and the new-token prompts (manifest push only)")
 
 	return cmd
@@ -76,7 +86,13 @@ func updateRun(opts *updateOptions) error {
 	ios := opts.factory.IOStreams
 	cs := ios.ColorScheme()
 
-	ac, _ := config.LoadAuth()
+	ac, err := loadAuth()
+	if err != nil {
+		return err
+	}
+	// Saved client credentials belong to the saved app; don't reinstall a
+	// different app with them.
+	savedAppID := ac.AppID
 
 	// Resolve App ID — flag wins, then saved value, then prompt
 	appID := opts.appID
@@ -84,7 +100,7 @@ func updateRun(opts *updateOptions) error {
 		appID = ac.AppID
 	}
 	if appID == "" {
-		if opts.withToken {
+		if !ios.CanPrompt() {
 			return fmt.Errorf("no app ID saved. Pass --app-id A0123456789")
 		}
 		fmt.Fprintln(ios.Out, "Find your App ID at:")
@@ -103,36 +119,24 @@ func updateRun(opts *updateOptions) error {
 		ac.AppID = appID
 	}
 
-	// Resolve config token — flag/stdin wins, then saved value, then prompt
-	var configToken string
-	if opts.withToken {
-		scanner := bufio.NewScanner(ios.In)
-		if !scanner.Scan() {
-			return fmt.Errorf("failed to read config token from stdin")
+	// Resolve config token — stdin/clipboard/env/saved, then prompt
+	configToken, save, err := configTokenFrom(ios, opts.source, ac)
+	if errors.Is(err, errNoConfigToken) {
+		if !ios.CanPrompt() {
+			return nonInteractiveTokenHelp()
 		}
-		configToken = strings.TrimSpace(scanner.Text())
-	} else if ac.ConfigToken != "" {
-		configToken = ac.ConfigToken
-		fmt.Fprintf(ios.Out, "Using saved config token (from %s)\n", config.AuthFile())
-	} else {
-		fmt.Fprintln(ios.Out, "App Configuration Token needed.")
-		fmt.Fprintln(ios.Out, "Where to find it:")
-		fmt.Fprintf(ios.Out, "  1. Go to %s (the apps LIST page, not inside an app)\n", cs.Cyan("https://api.slack.com/apps"))
-		fmt.Fprintln(ios.Out, "  2. Scroll to the bottom — section is titled \"Your App Configuration Tokens\"")
-		fmt.Fprintln(ios.Out, "  3. Click \"Generate Token\" next to your workspace, copy the Access Token (xoxe.xoxp-...)")
-		fmt.Fprintln(ios.Out, "  Note: this is NOT in App Credentials inside your app. It's a workspace-level admin token.")
-		fmt.Fprintln(ios.Out)
-		p := prompter.New(ios)
-		entered, err := p.Password("Paste your App Configuration Token:")
-		if err != nil {
-			return fmt.Errorf("could not read token: %w", err)
-		}
-		configToken = strings.TrimSpace(entered)
+		configToken, err = promptConfigToken(ios, cs)
+		save = true
 	}
-	if configToken == "" {
-		return fmt.Errorf("config token cannot be empty")
+	if err != nil {
+		return err
 	}
-	ac.ConfigToken = configToken
+	if save {
+		ac.ConfigToken = configToken
+	}
+	if appID != savedAppID {
+		ac.ClientID, ac.ClientSecret = "", ""
+	}
 	ac.AppID = appID
 	if err := ac.Save(); err != nil {
 		fmt.Fprintf(ios.ErrOut, "Warning: could not save auth config: %v\n", err)
@@ -193,54 +197,19 @@ func updateRun(opts *updateOptions) error {
 		return nil
 	}
 
-	// Open reinstall page so the new scopes take effect
-	installURL := fmt.Sprintf("https://api.slack.com/apps/%s/install-on-team", appID)
-	fmt.Fprintf(ios.Out, "\n%s Opening reinstall page in your browser...\n", cs.Blue("→"))
-	fmt.Fprintf(ios.Out, "  %s\n\n", installURL)
-	_ = browser.Open(installURL)
-
-	fmt.Fprintln(ios.Out, "Reinstall the app to your workspace, then come back here to paste the new tokens.")
-	fmt.Fprintln(ios.Out)
-
-	// Reuse storeDetectedToken from create.go for token paste flow
-	p := prompter.New(ios)
-	storedBot := false
-	storedUser := false
-
-	oauthURL := fmt.Sprintf("https://api.slack.com/apps/%s/oauth", appID)
-	fmt.Fprintln(ios.Out, cs.Bold("After reinstalling, grab the OAuth tokens from the OAuth & Permissions page:"))
-	fmt.Fprintf(ios.Out, "  %s\n", cs.Cyan(oauthURL))
-	fmt.Fprintln(ios.Out, "  • Bot User OAuth Token (xoxb-...) — top of page")
-	fmt.Fprintln(ios.Out, "  • User OAuth Token (xoxp-...) — just below it")
-	fmt.Fprintln(ios.Out, "Token type is auto-detected from prefix.")
-	fmt.Fprintln(ios.Out)
-
-	token1, err := p.Password("Paste your first token:")
-	if err != nil {
-		fmt.Fprintln(ios.ErrOut, "Skipping tokens. You can finish later with: slackbuzz auth login")
-	} else {
-		token1 = strings.TrimSpace(token1)
-		if token1 != "" {
-			storedBot, storedUser = storeDetectedToken(ios, cs, token1, storedBot, storedUser)
-		}
+	// Reinstall so the new scopes take effect. Apps created before the OAuth
+	// flow existed have no saved client credentials — ask once, and save
+	// them only after Slack accepts them.
+	app := oauthApp{TeamID: savedTeamID()}
+	prompted := false
+	if appID == savedAppID && ac.ClientID != "" {
+		app.ClientID, app.ClientSecret = ac.ClientID, auth.GetClientSecret()
 	}
-
-	if !storedBot || !storedUser {
-		missing := "user (xoxp-)"
-		if !storedBot {
-			missing = "bot (xoxb-)"
-		}
-		fmt.Fprintf(ios.Out, "(Optional) Paste your %s token:\n", missing)
-		token2, err := p.Password("Token (enter to skip):")
-		if err == nil {
-			token2 = strings.TrimSpace(token2)
-			if token2 != "" {
-				// Last token in the flow — store it for its side effect; the
-				// returned flags aren't read again before we return.
-				_, _ = storeDetectedToken(ios, cs, token2, storedBot, storedUser)
-			}
-		}
+	if (app.ClientID == "" || app.ClientSecret == "") && ios.CanPrompt() {
+		app.ClientID, app.ClientSecret = promptClientCredentials(ios, cs, appID)
+		prompted = true
 	}
+	installApp(ios, cs, appID, app, prompted)
 
 	fmt.Fprintf(ios.Out, "%s Update complete. Try the command that prompted this update.\n", cs.Green("✓"))
 
@@ -255,4 +224,28 @@ type manifestUpdateResponse struct {
 		Message string `json:"message"`
 		Pointer string `json:"pointer"`
 	} `json:"errors,omitempty"`
+}
+
+// savedTeamID is the workspace the stored tokens belong to, if known.
+func savedTeamID() string {
+	id, _ := auth.GetTeamInfo()
+	return id
+}
+
+// promptClientCredentials asks for the app's Client ID and Secret so the
+// reinstall can run through OAuth. Empty results mean "paste tokens instead".
+func promptClientCredentials(ios *iostreams.IOStreams, cs *iostreams.ColorScheme, appID string) (string, string) {
+	fmt.Fprintln(ios.Out)
+	fmt.Fprintln(ios.Out, "To reinstall in the browser (no token copying), slackbuzz needs this app's credentials, once:")
+	fmt.Fprintf(ios.Out, "  %s — under App Credentials\n", cs.Cyan(fmt.Sprintf("https://api.slack.com/apps/%s/general", appID)))
+	p := prompter.New(ios)
+	clientID, err := p.Input("Client ID (enter to paste tokens instead):", "")
+	if err != nil || strings.TrimSpace(clientID) == "" {
+		return "", ""
+	}
+	clientSecret, err := p.Password("Client Secret:")
+	if err != nil {
+		return "", ""
+	}
+	return strings.TrimSpace(clientID), strings.TrimSpace(clientSecret)
 }
