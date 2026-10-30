@@ -196,14 +196,25 @@ func createRun(opts *createOptions) error {
 			missing = "bot (xoxb-)"
 		}
 		fmt.Fprintf(ios.Out, "(Optional) Paste your %s token for full functionality:\n", missing)
-		token2, err := p.Password("Token (enter to skip):")
-		if err == nil {
-			token2 = strings.TrimSpace(token2)
-			if token2 != "" {
-				// Last token in the flow — store it for its side effect; the
-				// returned flags aren't read again before we return.
-				_, _ = storeDetectedToken(ios, cs, token2, storedBot, storedUser)
+		for {
+			token2, err := p.Password("Token (enter to skip):")
+			if err != nil {
+				break
 			}
+			token2 = strings.TrimSpace(token2)
+			if token2 == "" {
+				break
+			}
+			// Re-pasting the first token (stale clipboard) would silently
+			// overwrite it and leave the other side unset.
+			if (storedBot && auth.IsBotToken(token2)) || (storedUser && auth.IsUserToken(token2)) {
+				fmt.Fprintf(ios.ErrOut, "That's the same token type as the first one — expected a %s token. Check your clipboard and try again.\n", missing)
+				continue
+			}
+			// Last token in the flow — store it for its side effect; the
+			// returned flags aren't read again before we return.
+			_, _ = storeDetectedToken(ios, cs, token2, storedBot, storedUser)
+			break
 		}
 	}
 
