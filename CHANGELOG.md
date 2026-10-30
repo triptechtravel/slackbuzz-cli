@@ -7,6 +7,20 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.1]
+
+### Fixed
+
+- **`app create` failed with `invalid_manifest`** — Slack rejected the
+  manifest with "Illegal bot scopes found `search:read`". The spec lists
+  some user-only scopes unqualified, so `gen-manifest` put them on the bot
+  side too. `search:read`, `stars:read` and `stars:write` now go to the
+  user side only.
+- **`app create` silently re-stored the first token** — if the optional
+  second paste was the same token type as the first (e.g. a stale
+  clipboard), it overwrote it and left the other token unset. It now
+  explains and re-prompts.
+
 ## [0.12.0]
 
 ### Fixed
