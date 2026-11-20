@@ -7,6 +7,8 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.13.0]
+
 ### Added
 
 - **`send --file`** / **`message send --file`** (repeatable) — attach files
