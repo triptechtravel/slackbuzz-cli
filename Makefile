@@ -72,10 +72,9 @@ api-spec-refresh:
 # Slack method actually called by the CLI. Eliminates the manual-drift class
 # of bugs (where the manifest is stale relative to what commands need).
 .PHONY: manifest-gen
-manifest-gen: api-spec
-	@echo "Regenerating pkg/cmd/app/manifest.go from spec + command method usage..."
+manifest-gen: api-gen
+	@echo "Regenerating pkg/cmd/app/manifest.go from generated scopes + command method usage..."
 	go run ./cmd/gen-manifest \
-		-spec api/specs/slack_web.json \
 		-cmd-root pkg/cmd \
 		-out pkg/cmd/app/manifest.go
 	gofmt -w pkg/cmd/app/manifest.go
@@ -91,7 +90,7 @@ api-gen: api-spec
 
 # CI hygiene: fail if generated artifacts drift from committed.
 .PHONY: verify-gen
-verify-gen: manifest-gen api-gen
+verify-gen: api-gen manifest-gen
 	@if ! git diff --quiet pkg/cmd/app/manifest.go internal/slackapi/; then \
 		echo "ERROR: generated files are out of date. Run 'make manifest-gen api-gen' and commit."; \
 		git diff --stat pkg/cmd/app/manifest.go internal/slackapi/; \

@@ -280,7 +280,6 @@ const externalUploadMethods = `{
     "parameters": [
       {"name": "files", "in": "formData", "required": true, "type": "string", "description": "JSON array of {id, title} for the files to complete."},
       {"name": "channel_id", "in": "formData", "type": "string", "description": "Channel ID where the files will be shared."},
-      {"name": "channels", "in": "formData", "type": "string", "description": "Comma-separated channel IDs where the files will be shared."},
       {"name": "initial_comment", "in": "formData", "type": "string", "description": "The message text introducing the files."},
       {"name": "thread_ts", "in": "formData", "type": "string", "description": "Thread to share the files into."}
     ],
@@ -292,8 +291,11 @@ const externalUploadMethods = `{
   }}
 }`
 
-// injectExternalUploadMethods adds the external upload methods to the spec.
+// injectExternalUploadMethods adds the external upload methods to the spec,
+// and drops files.upload, which they replaced: Slack answers it with
+// method_deprecated, so no wrapper should exist to call.
 func injectExternalUploadMethods(s *spec) {
+	delete(s.Paths, "/files.upload")
 	var paths map[string]map[string]operation
 	if err := json.Unmarshal([]byte(externalUploadMethods), &paths); err != nil {
 		panic("externalUploadMethods: " + err.Error())

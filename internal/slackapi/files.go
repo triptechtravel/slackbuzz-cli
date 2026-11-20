@@ -7,13 +7,14 @@
 //
 //  1. FilesGetUploadURLExternal — filename + length → presigned URL + file_id.
 //  2. POST the bytes to the presigned URL (multipart, "filename" field). Not a
-//     Slack API method and unauthenticated: the only hand-written step.
+//     Slack API method and unauthenticated: the only hand-written step. It's
+//     streamed, and bounded by the caller's context rather than the client's
+//     30s per-request timeout, which a large file on a slow link outlasts.
 //  3. FilesCompleteUploadExternal — shares every file_id in ONE call, so all
 //     the files arrive as one message with the initial comment.
 package slackapi
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,29 +23,25 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // UploadFileSpec is one file in an UploadFiles call.
 type UploadFileSpec struct {
-	FilePath    string // path on disk; required
-	Filename    string // defaults to basename of FilePath
-	Title       string // defaults to Filename
-	AltTxt      string
-	SnippetType string
+	FilePath string // path on disk; required
+	Title    string // defaults to the file's name
 }
 
 // UploadFilesParams shares several files as one message.
 type UploadFilesParams struct {
 	Files          []UploadFileSpec
-	Channels       string // single channel_id; if comma-separated, the first wins
+	ChannelID      string
 	InitialComment string
 	ThreadTS       string
 }
 
 // UploadFiles uploads every file (steps 1-2), then shares them together in a
 // single completeUploadExternal call: one message carrying all the files and
-// the initial comment.
+// the initial comment. It fails unless Slack reports every file shared.
 func UploadFiles(ctx context.Context, c *Client, params *UploadFilesParams) (*FilesCompleteUploadExternalResponse, error) {
 	if params == nil || len(params.Files) == 0 {
 		return nil, fmt.Errorf("UploadFiles: at least one file is required")
@@ -62,13 +59,10 @@ func UploadFiles(ctx context.Context, c *Client, params *UploadFilesParams) (*Fi
 		if err != nil {
 			return nil, fmt.Errorf("UploadFiles: stat %s: %w", f.FilePath, err)
 		}
-		filename := f.Filename
-		if filename == "" {
-			filename = filepath.Base(f.FilePath)
-		}
+		filename := filepath.Base(f.FilePath)
 
 		step1, err := FilesGetUploadURLExternal(ctx, c, &FilesGetUploadURLExternalParams{
-			Filename: filename, Length: int(info.Size()), AltTxt: f.AltTxt, SnippetType: f.SnippetType,
+			Filename: filename, Length: int(info.Size()),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("files.getUploadURLExternal: %w", err)
@@ -91,23 +85,24 @@ func UploadFiles(ctx context.Context, c *Client, params *UploadFilesParams) (*Fi
 	if err != nil {
 		return nil, fmt.Errorf("UploadFiles: marshal files spec: %w", err)
 	}
-	// The endpoint takes a single channel_id; if a caller passed several, the first wins.
-	channel, _, _ := strings.Cut(params.Channels, ",")
 	resp, err := FilesCompleteUploadExternal(ctx, c, &FilesCompleteUploadExternalParams{
 		Files:          string(filesJSON),
-		ChannelID:      strings.TrimSpace(channel),
+		ChannelID:      params.ChannelID,
 		InitialComment: params.InitialComment,
 		ThreadTS:       params.ThreadTS,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("files.completeUploadExternal: %w", err)
 	}
+	if len(resp.Files) != len(specs) {
+		return nil, fmt.Errorf("files.completeUploadExternal: shared %d of %d files", len(resp.Files), len(specs))
+	}
 	return resp, nil
 }
 
-// putFileToPresignedURL uploads the file content to Slack's presigned
-// URL. The presigned URL is unauthenticated — Slack rejects requests
-// that send the bearer token to it.
+// putFileToPresignedURL streams the file to Slack's presigned URL. The URL
+// is unauthenticated (Slack rejects the bearer token there), and the request
+// is bounded by ctx, not by c.HTTP's per-request timeout.
 func putFileToPresignedURL(ctx context.Context, c *Client, uploadURL, filePath, filename string) error {
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -115,26 +110,28 @@ func putFileToPresignedURL(ctx context.Context, c *Client, uploadURL, filePath, 
 	}
 	defer f.Close()
 
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	fileWriter, err := writer.CreateFormFile("filename", filename)
+	body, writer := io.Pipe()
+	form := multipart.NewWriter(writer)
+	go func() {
+		part, err := form.CreateFormFile("filename", filename)
+		if err == nil {
+			_, err = io.Copy(part, f)
+		}
+		if err == nil {
+			err = form.Close()
+		}
+		writer.CloseWithError(err)
+	}()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", uploadURL, body)
 	if err != nil {
-		return fmt.Errorf("UploadFiles: create form file: %w", err)
-	}
-	if _, err := io.Copy(fileWriter, f); err != nil {
-		return fmt.Errorf("UploadFiles: copy file content: %w", err)
-	}
-	if err := writer.Close(); err != nil {
+		body.Close()
 		return err
 	}
+	req.Header.Set("Content-Type", form.FormDataContentType())
 
-	req, err := http.NewRequestWithContext(ctx, "POST", uploadURL, &body)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	resp, err := c.HTTP.Do(req)
+	httpClient := &http.Client{Transport: c.HTTP.Transport}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("upload to presigned URL: %w", err)
 	}

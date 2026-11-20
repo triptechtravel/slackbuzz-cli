@@ -400,3 +400,25 @@ func TestIsDMChannelID(t *testing.T) {
 		}
 	}
 }
+
+// "me" is the signed-in user; a partial name resolves only when it can't mean
+// anyone else ("me" once matched an app called SatisMeter).
+func TestResolveUser_MeAndAmbiguousPartialNames(t *testing.T) {
+	r := &Resolver{
+		users: map[string]string{
+			"herman": "U1", "herman.gorbatovskii": "U1", "Herman Gorbatovskii": "U1",
+			"SatisMeter": "U9", "michelle": "U2", "michael": "U3",
+		},
+		usersLoaded: true,
+		self:        func() (string, error) { return "U_ME", nil },
+	}
+	for in, want := range map[string]string{"@me": "U_ME", "me": "U_ME", "Me": "U_ME", "gorbat": "U1", "@satis": "U9"} {
+		got, err := r.ResolveUser(in)
+		if err != nil || got != want {
+			t.Errorf("ResolveUser(%q) = %q, %v; want %q", in, got, err, want)
+		}
+	}
+	if _, err := r.ResolveUser("mich"); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Errorf("ResolveUser(mich) should be ambiguous (michelle, michael), got %v", err)
+	}
+}

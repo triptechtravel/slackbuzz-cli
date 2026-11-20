@@ -70,7 +70,9 @@ var userScopes = []string{
 //   - conversations.list
 //   - conversations.replies
 //   - files.completeUploadExternal
+//   - files.delete
 //   - files.getUploadURLExternal
+//   - files.info
 //   - reactions.add
 //   - reactions.get
 //   - reactions.remove

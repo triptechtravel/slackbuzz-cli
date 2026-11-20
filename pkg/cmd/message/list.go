@@ -144,6 +144,9 @@ func listRun(opts *listOptions) error {
 	}
 
 	if len(messages) == 0 {
+		if opts.json.WantsJSON() {
+			return opts.json.OutputJSON(ios.Out, []any{})
+		}
 		fmt.Fprintln(ios.Out, "No messages found.")
 		return nil
 	}

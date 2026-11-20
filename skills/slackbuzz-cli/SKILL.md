@@ -88,7 +88,8 @@ slackbuzz message delete #general 1706000000.000000 --confirm   # --confirm is r
 ```
 
 A message the bot posted (e.g. a self-DM, which goes through the bot) is
-deleted with `--as-bot`, targeting the user: `slackbuzz message delete @me <ts> --confirm --as-bot`.
+deleted with `--as-bot`, targeting yourself: `slackbuzz message delete @me <ts> --confirm --as-bot`
+(`me`/`@me` is always the signed-in user).
 
 ### Images and files
 
@@ -106,8 +107,19 @@ slackbuzz file upload a.png b.png '#design' --comment "Before and after"
 ```
 
 `--comment` and the message text go through the same Markdown→mrkdwn and
-@mention handling as `send` (`--raw` turns conversion off). `--file` can't be
-combined with `--blocks` (Slack posts a file's message as plain mrkdwn).
+@mention handling as `send` (`--raw` turns conversion off). With `--file` the
+text is optional. `--file` can't be combined with `--blocks` (Slack posts a
+file's message as plain mrkdwn). `send --file --json` returns
+`{"channel", "timestamp", "files": [{"id", "name", …}]}`: the timestamp to
+edit, delete or reply to, and file IDs.
+
+Deleting a message leaves its files in Slack; remove them too:
+
+```bash
+slackbuzz message delete '#released' 1706000000.000000 --confirm
+slackbuzz file delete F0CK25W3ABH F0CKKDV2K8R --confirm
+```
+
 Screenshots for a channel read best at phone width (about 390px wide).
 
 ### Search

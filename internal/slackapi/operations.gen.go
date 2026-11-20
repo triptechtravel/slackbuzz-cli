@@ -1738,20 +1738,6 @@ func FilesSharedPublicURL(ctx context.Context, c *Client, params *FilesSharedPub
 	return &resp, nil
 }
 
-// FilesUpload calls Slack's files.upload method.
-//
-// Required scopes (any one combination): files:write:user
-func FilesUpload(ctx context.Context, c *Client, params *FilesUploadParams) (*FilesUploadResponse, error) {
-	var resp FilesUploadResponse
-	form := params.values()
-	body, err := Do(ctx, c, "files.upload", form, &resp)
-	resp.Raw = body
-	if err != nil {
-		return &resp, err
-	}
-	return &resp, nil
-}
-
 // MigrationExchange calls Slack's migration.exchange method.
 //
 // Required scopes (any one combination): tokens.basic

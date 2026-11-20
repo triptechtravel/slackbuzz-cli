@@ -132,7 +132,6 @@ var MethodScopes = map[string][]string{
 	"files.remote.update":                                      {"remote_files:write"},
 	"files.revokePublicURL":                                    {"files:write:user"},
 	"files.sharedPublicURL":                                    {"files:write:user"},
-	"files.upload":                                             {"files:write:user"},
 	"migration.exchange":                                       {"tokens.basic"},
 	"oauth.access":                                             {"none"},
 	"oauth.token":                                              {"none"},

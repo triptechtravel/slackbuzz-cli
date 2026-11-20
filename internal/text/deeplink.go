@@ -2,9 +2,10 @@ package text
 
 import (
 	"fmt"
-	"golang.org/x/term"
 	"os"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 // SlackDeeplink generates a clickable slack:// deeplink for opening items
@@ -66,8 +67,7 @@ func HyperlinkSupported() bool {
 	}
 	// Most modern terminals support OSC 8: iTerm2, kitty, WezTerm,
 	// GNOME Terminal, Windows Terminal, etc.
-	term := os.Getenv("TERM_PROGRAM")
-	switch term {
+	switch os.Getenv("TERM_PROGRAM") {
 	case "iTerm.app", "WezTerm", "kitty":
 		return true
 	}

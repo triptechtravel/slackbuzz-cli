@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
 	"github.com/triptechtravel/slackbuzz-cli/internal/recent"
 	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
-	slacktext "github.com/triptechtravel/slackbuzz-cli/internal/text"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -24,6 +24,7 @@ type sendOptions struct {
 	blocks   bool
 	raw      bool
 	files    []string
+	title    string // the first file's title (file upload --title)
 	json     cmdutil.JSONFlags
 }
 
@@ -158,9 +159,10 @@ func sendRun(opts *sendOptions) error {
 		}
 	}
 
-	// Get message text from args or stdin
+	// Get message text from args or stdin. With files the text is optional
+	// (and stdin isn't read): the files can go alone.
 	text := opts.text
-	if text == "" {
+	if text == "" && len(opts.files) == 0 {
 		if agentMode {
 			return fmt.Errorf("message text is required (SLACKBUZZ_AGENT=1 disables interactive prompts)")
 		}
@@ -181,42 +183,18 @@ func sendRun(opts *sendOptions) error {
 		}
 	}
 
-	if text == "" {
+	if text == "" && len(opts.files) == 0 {
 		return fmt.Errorf("message text cannot be empty")
 	}
 
-	// Shell unescape + Markdown→mrkdwn (unless --raw)
-	text, hints := slacktext.NormalizeOutgoing(text, opts.raw)
-	cmdutil.PrintFormatHints(ios, hints)
-
-	// Resolve @mentions in message body
-	if strings.Contains(text, "@") {
-		resolved, names, err := resolver.ResolveMentions(text)
-		if err == nil {
-			text = resolved
-			for _, name := range names {
-				fmt.Fprintf(ios.ErrOut, "Mentioning %s\n", cs.Bold("@"+name))
-			}
-		}
+	// Shell unescape, Markdown→mrkdwn (unless --raw), @mentions.
+	if text != "" {
+		text = cmdutil.PrepareOutgoing(ios, resolver, text, opts.raw)
 	}
 
 	// With files, the text is the files' message: one files.completeUploadExternal.
 	if len(opts.files) > 0 {
-		uploaded, err := slackapi.UploadFiles(context.Background(), client.API, &slackapi.UploadFilesParams{
-			Files:          cmdutil.UploadSpecs(opts.files),
-			Channels:       channelID,
-			InitialComment: text,
-			ThreadTS:       opts.threadTS,
-		})
-		if err != nil {
-			return fmt.Errorf("%s", api.FormatSendError(err, opts.channel))
-		}
-		_ = recent.Push(recentSlot(opts.channel), opts.channel)
-		if opts.json.WantsJSON() {
-			return opts.json.OutputJSON(ios.Out, map[string]any{"channel": channelID, "files": uploaded.Files})
-		}
-		fmt.Fprintf(ios.Out, "%s Message with %d file(s) sent to %s\n", cs.Green("✓"), len(uploaded.Files), cs.Bold(opts.channel))
-		return nil
+		return sendFiles(opts, client, channelID, text)
 	}
 
 	// Build chat.postMessage params.
@@ -251,6 +229,72 @@ func sendRun(opts *sendOptions) error {
 	fmt.Fprintf(ios.Out, "%s Message sent to %s (ts: %s)\n",
 		cs.Green("✓"), cs.Bold(opts.channel), respTS)
 	return nil
+}
+
+// sendFiles posts text and files as one message, then reports the message's
+// timestamp like a plain send (Slack fills in where a file was shared a
+// moment after the upload completes, so it's read back from files.info).
+func sendFiles(opts *sendOptions, client *api.Client, channelID, text string) error {
+	ios := opts.factory.IOStreams
+	cs := ios.ColorScheme()
+	specs := make([]slackapi.UploadFileSpec, len(opts.files))
+	for i, fp := range opts.files {
+		specs[i] = slackapi.UploadFileSpec{FilePath: fp}
+	}
+	specs[0].Title = opts.title
+
+	ctx := context.Background()
+	uploaded, err := slackapi.UploadFiles(ctx, client.API, &slackapi.UploadFilesParams{
+		Files:          specs,
+		ChannelID:      channelID,
+		InitialComment: text,
+		ThreadTS:       opts.threadTS,
+	})
+	if err != nil {
+		return fmt.Errorf("%s", api.FormatSendError(err, opts.channel))
+	}
+	_ = recent.Push(recentSlot(opts.channel), opts.channel)
+	ts := sharedTS(ctx, client.API, uploaded.Files[0].ID, channelID)
+
+	if opts.json.WantsJSON() {
+		return opts.json.OutputJSON(ios.Out, map[string]any{"channel": channelID, "timestamp": ts, "files": uploaded.Files})
+	}
+	for _, f := range uploaded.Files {
+		fmt.Fprintf(ios.Out, "%s Attached %s\n", cs.Green("✓"), cs.Bold(f.Name))
+	}
+	fmt.Fprintf(ios.Out, "%s Message with %d file(s) sent to %s (ts: %s)\n", cs.Green("✓"), len(uploaded.Files), cs.Bold(opts.channel), ts)
+	return nil
+}
+
+// sharedTS is the timestamp of the message a file was shared in, polled from
+// files.info for a few seconds; "" if Slack hasn't reported it yet.
+func sharedTS(ctx context.Context, c *slackapi.Client, fileID, channelID string) string {
+	for attempt := 0; attempt < 10; attempt++ {
+		if info, err := slackapi.FilesInfo(ctx, c, &slackapi.FilesInfoParams{File: fileID}); err == nil && info.File != nil {
+			if ts := shareTS(info.File.Shares, channelID); ts != "" {
+				return ts
+			}
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	return ""
+}
+
+// shareTS reads a file's shares ({"public"|"private": {channel: [{ts}]}}).
+func shareTS(shares map[string]any, channelID string) string {
+	for _, visibility := range []string{"public", "private"} {
+		byChannel, _ := shares[visibility].(map[string]any)
+		list, _ := byChannel[channelID].([]any)
+		if len(list) == 0 {
+			continue
+		}
+		if share, _ := list[0].(map[string]any); share != nil {
+			if ts, _ := share["ts"].(string); ts != "" {
+				return ts
+			}
+		}
+	}
+	return ""
 }
 
 // recentSlot is the recent-context slot a target is remembered under.
@@ -319,4 +363,10 @@ func splitForBlocks(text string, maxLen int) []string {
 	}
 
 	return chunks
+}
+
+// PostFiles posts files, with optional text, as one message through the send
+// path (token choice, agent mode, self-DM, formatting): file upload's backend.
+func PostFiles(f *cmdutil.Factory, target string, paths []string, text, title, threadTS string, raw bool, json cmdutil.JSONFlags) error {
+	return sendRun(&sendOptions{factory: f, channel: target, text: text, files: paths, title: title, threadTS: threadTS, raw: raw, json: json})
 }

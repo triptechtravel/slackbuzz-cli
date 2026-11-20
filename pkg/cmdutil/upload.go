@@ -3,9 +3,6 @@ package cmdutil
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-
-	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 )
 
 // CheckUploadFiles fails before anything is posted when a file is missing,
@@ -24,13 +21,4 @@ func CheckUploadFiles(paths []string) error {
 		}
 	}
 	return nil
-}
-
-// UploadSpecs turns file paths into upload specs (named by their basename).
-func UploadSpecs(paths []string) []slackapi.UploadFileSpec {
-	specs := make([]slackapi.UploadFileSpec, len(paths))
-	for i, fp := range paths {
-		specs[i] = slackapi.UploadFileSpec{FilePath: fp, Filename: filepath.Base(fp)}
-	}
-	return specs
 }
