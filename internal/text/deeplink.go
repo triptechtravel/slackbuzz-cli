@@ -2,6 +2,7 @@ package text
 
 import (
 	"fmt"
+	"golang.org/x/term"
 	"os"
 	"strings"
 )
@@ -58,6 +59,11 @@ func SlackDMLink(teamID, userID string) string {
 // HyperlinkSupported returns true if the terminal likely supports
 // OSC 8 hyperlinks (clickable links with display text).
 func HyperlinkSupported() bool {
+	// Piped or captured output (scripts, agents) gets plain text: the escape
+	// codes are only useful to a terminal that renders them.
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		return false
+	}
 	// Most modern terminals support OSC 8: iTerm2, kitty, WezTerm,
 	// GNOME Terminal, Windows Terminal, etc.
 	term := os.Getenv("TERM_PROGRAM")

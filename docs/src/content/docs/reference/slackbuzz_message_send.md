@@ -48,6 +48,9 @@ slackbuzz message send <channel|user> [text] [flags]
   # Send to a thread
   slackbuzz message send #general "Reply here" --thread-ts 1234567890.123456
 
+  # Attach images (one message: the text with the files under it)
+  slackbuzz message send #released "New release" --file before.png --file after.png
+
   # Pipe content
   echo "Build passed" | slackbuzz message send #deploys
 
@@ -60,6 +63,7 @@ slackbuzz message send <channel|user> [text] [flags]
 ```
       --as-bot             Send as the bot instead of your user account
       --blocks             Send via Block Kit sections (richer mrkdwn rendering)
+      --file stringArray   Attach a file to the message (repeatable; all go in the one message)
   -h, --help               help for send
       --jq string          Filter JSON output using a jq expression
       --json               Output JSON

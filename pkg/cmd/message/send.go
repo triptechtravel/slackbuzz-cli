@@ -23,6 +23,7 @@ type sendOptions struct {
 	asBot    bool
 	blocks   bool
 	raw      bool
+	files    []string
 	json     cmdutil.JSONFlags
 }
 
@@ -64,6 +65,9 @@ blocks (Slack's 3000-char limit per block).`,
   # Send to a thread
   slackbuzz message send #general "Reply here" --thread-ts 1234567890.123456
 
+  # Attach images (one message: the text with the files under it)
+  slackbuzz message send #released "New release" --file before.png --file after.png
+
   # Pipe content
   echo "Build passed" | slackbuzz message send #deploys
 
@@ -84,6 +88,7 @@ blocks (Slack's 3000-char limit per block).`,
 	cmd.Flags().BoolVar(&opts.asBot, "as-bot", false, "Send as the bot instead of your user account")
 	cmd.Flags().BoolVar(&opts.blocks, "blocks", false, "Send via Block Kit sections (richer mrkdwn rendering)")
 	cmd.Flags().BoolVar(&opts.raw, "raw", false, "Disable Markdown→mrkdwn auto-conversion")
+	cmd.Flags().StringArrayVar(&opts.files, "file", nil, "Attach a file to the message (repeatable; all go in the one message)")
 	cmdutil.AddJSONFlags(cmd, &opts.json)
 
 	return cmd
@@ -92,6 +97,13 @@ blocks (Slack's 3000-char limit per block).`,
 func sendRun(opts *sendOptions) error {
 	ios := opts.factory.IOStreams
 	cs := ios.ColorScheme()
+
+	if len(opts.files) > 0 && opts.blocks {
+		return fmt.Errorf("--file can't be combined with --blocks: Slack posts a file's message as plain mrkdwn")
+	}
+	if err := cmdutil.CheckUploadFiles(opts.files); err != nil {
+		return err
+	}
 
 	agentMode := opts.factory.IsAgentMode()
 
@@ -188,6 +200,25 @@ func sendRun(opts *sendOptions) error {
 		}
 	}
 
+	// With files, the text is the files' message: one files.completeUploadExternal.
+	if len(opts.files) > 0 {
+		uploaded, err := slackapi.UploadFiles(context.Background(), client.API, &slackapi.UploadFilesParams{
+			Files:          cmdutil.UploadSpecs(opts.files),
+			Channels:       channelID,
+			InitialComment: text,
+			ThreadTS:       opts.threadTS,
+		})
+		if err != nil {
+			return fmt.Errorf("%s", api.FormatSendError(err, opts.channel))
+		}
+		_ = recent.Push(recentSlot(opts.channel), opts.channel)
+		if opts.json.WantsJSON() {
+			return opts.json.OutputJSON(ios.Out, map[string]any{"channel": channelID, "files": uploaded.Files})
+		}
+		fmt.Fprintf(ios.Out, "%s Message with %d file(s) sent to %s\n", cs.Green("✓"), len(uploaded.Files), cs.Bold(opts.channel))
+		return nil
+	}
+
 	// Build chat.postMessage params.
 	postParams := &slackapi.ChatPostMessageParams{
 		Channel:  channelID,
@@ -207,11 +238,7 @@ func sendRun(opts *sendOptions) error {
 	respTS := resp.TS
 
 	// Record the target for recent-context defaults (slackbuzz dm / send).
-	slot := "send"
-	if api.LooksLikeUser(opts.channel) {
-		slot = "dm"
-	}
-	_ = recent.Push(slot, opts.channel)
+	_ = recent.Push(recentSlot(opts.channel), opts.channel)
 
 	if opts.json.WantsJSON() {
 		result := map[string]string{
@@ -224,6 +251,14 @@ func sendRun(opts *sendOptions) error {
 	fmt.Fprintf(ios.Out, "%s Message sent to %s (ts: %s)\n",
 		cs.Green("✓"), cs.Bold(opts.channel), respTS)
 	return nil
+}
+
+// recentSlot is the recent-context slot a target is remembered under.
+func recentSlot(target string) string {
+	if api.LooksLikeUser(target) {
+		return "dm"
+	}
+	return "send"
 }
 
 // resolveTargetUserID resolves a DM target to a user ID without opening a conversation.

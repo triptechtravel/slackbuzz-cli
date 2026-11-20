@@ -135,6 +135,7 @@ func findCalledMethods(cmdRoot string, goToAPI map[string]string) (map[string]bo
 	handAugmented := map[string][]string{
 		"SearchFiles": {"search.files"},
 		"UploadFile":  {"files.getUploadURLExternal", "files.completeUploadExternal"},
+		"UploadFiles": {"files.getUploadURLExternal", "files.completeUploadExternal"},
 	}
 
 	fset := token.NewFileSet()

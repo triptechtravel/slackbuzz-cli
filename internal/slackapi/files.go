@@ -12,8 +12,9 @@
 //     array along with optional title), channel_id, initial_comment,
 //     thread_ts. This is the call that actually shares the file.
 //
-// The public UploadFile signature is unchanged so call sites don't need
-// to touch anything; the 3-step dance is internal.
+// UploadFiles runs steps 1-2 per file and step 3 once, so several files
+// arrive as ONE message (with the initial comment), the way the Slack client
+// shares them. UploadFile is the one-file case.
 package slackapi
 
 import (
@@ -97,52 +98,108 @@ func UploadFile(ctx context.Context, c *Client, params *UploadFileParams) (*Uplo
 	if params == nil || params.FilePath == "" {
 		return nil, fmt.Errorf("UploadFile: FilePath is required")
 	}
-
-	info, err := os.Stat(params.FilePath)
+	resp, err := UploadFiles(ctx, c, &UploadFilesParams{
+		Files:          []UploadFileSpec{{FilePath: params.FilePath, Filename: params.Filename, Title: params.Title, AltTxt: params.AltTxt, SnippetType: params.SnippetType}},
+		Channels:       params.Channels,
+		InitialComment: params.InitialComment,
+		ThreadTS:       params.ThreadTS,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("UploadFile: stat %s: %w", params.FilePath, err)
-	}
-	size := info.Size()
-
-	filename := params.Filename
-	if filename == "" {
-		filename = filepath.Base(params.FilePath)
-	}
-
-	// Step 1: getUploadURLExternal — get presigned URL + file_id
-	step1Form := url.Values{}
-	step1Form.Set("filename", filename)
-	step1Form.Set("length", strconv.FormatInt(size, 10))
-	if params.AltTxt != "" {
-		step1Form.Set("alt_txt", params.AltTxt)
-	}
-	if params.SnippetType != "" {
-		step1Form.Set("snippet_type", params.SnippetType)
-	}
-
-	var step1 uploadStep1Response
-	if _, err := Do(ctx, c, "files.getUploadURLExternal", step1Form, &step1); err != nil {
-		return nil, fmt.Errorf("files.getUploadURLExternal: %w", err)
-	}
-	if step1.UploadURL == "" || step1.FileID == "" {
-		return nil, fmt.Errorf("files.getUploadURLExternal: empty upload_url or file_id in response")
-	}
-
-	// Step 2: POST file content to the presigned URL via multipart/form-data
-	if err := putFileToPresignedURL(ctx, c, step1.UploadURL, params.FilePath, filename); err != nil {
 		return nil, err
 	}
+	out := &UploadFileResponse{BaseResponse: resp.BaseResponse, Raw: resp.Raw}
+	f := resp.Files[0]
+	out.File.ID, out.File.Title, out.File.Name = f.ID, f.Title, f.Name
+	out.File.Mimetype, out.File.URL, out.File.Permalink = f.Mimetype, f.URL, f.Permalink
+	return out, nil
+}
 
-	// Step 3: completeUploadExternal — share the file
+// UploadFileSpec is one file in an UploadFiles call.
+type UploadFileSpec struct {
+	FilePath    string // path on disk; required
+	Filename    string // defaults to basename of FilePath
+	Title       string // defaults to Filename
+	AltTxt      string
+	SnippetType string
+}
+
+// UploadFilesParams shares several files as one message.
+type UploadFilesParams struct {
+	Files          []UploadFileSpec
+	Channels       string // single channel_id; if comma-separated, the first wins
+	InitialComment string
+	ThreadTS       string
+}
+
+// UploadedFile is one shared file, in the order the files were given.
+type UploadedFile = uploadStep3File
+
+// UploadFilesResponse is the outcome of one UploadFiles call.
+type UploadFilesResponse struct {
+	BaseResponse
+	Raw   json.RawMessage
+	Files []UploadedFile
+}
+
+// UploadFiles uploads every file (steps 1-2), then shares them together in a
+// single files.completeUploadExternal call: one message carrying all the
+// files and the initial comment. Files come back in the order given.
+func UploadFiles(ctx context.Context, c *Client, params *UploadFilesParams) (*UploadFilesResponse, error) {
+	if params == nil || len(params.Files) == 0 {
+		return nil, fmt.Errorf("UploadFiles: at least one file is required")
+	}
 	type fileSpec struct {
 		ID    string `json:"id"`
 		Title string `json:"title,omitempty"`
 	}
-	title := params.Title
-	if title == "" {
-		title = filename
+	specs := make([]fileSpec, 0, len(params.Files))
+	fallback := make([]UploadedFile, 0, len(params.Files))
+	for _, f := range params.Files {
+		if f.FilePath == "" {
+			return nil, fmt.Errorf("UploadFile: FilePath is required")
+		}
+		info, err := os.Stat(f.FilePath)
+		if err != nil {
+			return nil, fmt.Errorf("UploadFile: stat %s: %w", f.FilePath, err)
+		}
+		filename := f.Filename
+		if filename == "" {
+			filename = filepath.Base(f.FilePath)
+		}
+
+		// Step 1: getUploadURLExternal — get presigned URL + file_id
+		step1Form := url.Values{}
+		step1Form.Set("filename", filename)
+		step1Form.Set("length", strconv.FormatInt(info.Size(), 10))
+		if f.AltTxt != "" {
+			step1Form.Set("alt_txt", f.AltTxt)
+		}
+		if f.SnippetType != "" {
+			step1Form.Set("snippet_type", f.SnippetType)
+		}
+		var step1 uploadStep1Response
+		if _, err := Do(ctx, c, "files.getUploadURLExternal", step1Form, &step1); err != nil {
+			return nil, fmt.Errorf("files.getUploadURLExternal: %w", err)
+		}
+		if step1.UploadURL == "" || step1.FileID == "" {
+			return nil, fmt.Errorf("files.getUploadURLExternal: empty upload_url or file_id in response")
+		}
+
+		// Step 2: POST file content to the presigned URL via multipart/form-data
+		if err := putFileToPresignedURL(ctx, c, step1.UploadURL, f.FilePath, filename); err != nil {
+			return nil, err
+		}
+
+		title := f.Title
+		if title == "" {
+			title = filename
+		}
+		specs = append(specs, fileSpec{ID: step1.FileID, Title: title})
+		fallback = append(fallback, UploadedFile{ID: step1.FileID, Title: title, Name: filename})
 	}
-	filesJSON, err := json.Marshal([]fileSpec{{ID: step1.FileID, Title: title}})
+
+	// Step 3: completeUploadExternal — share every file in one message
+	filesJSON, err := json.Marshal(specs)
 	if err != nil {
 		return nil, fmt.Errorf("UploadFile: marshal files spec: %w", err)
 	}
@@ -170,25 +227,11 @@ func UploadFile(ctx context.Context, c *Client, params *UploadFileParams) (*Uplo
 	if err != nil {
 		return nil, fmt.Errorf("files.completeUploadExternal: %w", err)
 	}
-
-	out := &UploadFileResponse{
-		BaseResponse: step3.BaseResponse,
-		Raw:          raw,
-	}
-	if len(step3.Files) > 0 {
-		f := step3.Files[0]
-		out.File.ID = f.ID
-		out.File.Title = f.Title
-		out.File.Name = f.Name
-		out.File.Mimetype = f.Mimetype
-		out.File.URL = f.URL
-		out.File.Permalink = f.Permalink
-	} else {
-		// Fall back to the file_id from step 1 so callers always have
-		// something to reference.
-		out.File.ID = step1.FileID
-		out.File.Title = title
-		out.File.Name = filename
+	// Slack echoes each shared file; without that, fall back to step 1's ids
+	// so callers always have something to reference.
+	out := &UploadFilesResponse{BaseResponse: step3.BaseResponse, Raw: raw, Files: fallback}
+	if len(step3.Files) == len(fallback) {
+		out.Files = step3.Files
 	}
 	return out, nil
 }

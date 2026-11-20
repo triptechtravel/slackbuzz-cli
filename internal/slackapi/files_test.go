@@ -182,3 +182,47 @@ func writeTempFile(t *testing.T, name, body string) string {
 	require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
 	return path
 }
+
+// Several files are uploaded one by one but shared in ONE
+// completeUploadExternal call, so they arrive as one message with the comment.
+func TestUploadFiles_SharesAllFilesInOneMessage(t *testing.T) {
+	a := writeTempFile(t, "a.png", "aaa")
+	b := writeTempFile(t, "b.png", "bbbb")
+
+	mux := http.NewServeMux()
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	n, uploaded, completes := 0, map[string]string{}, []url.Values{}
+	mux.HandleFunc("/api/files.getUploadURLExternal", func(w http.ResponseWriter, r *http.Request) {
+		n++
+		id := "F" + string(rune('0'+n))
+		_, _ = w.Write([]byte(`{"ok":true,"upload_url":"` + srv.URL + `/up/` + id + `","file_id":"` + id + `"}`))
+	})
+	mux.HandleFunc("/up/", func(w http.ResponseWriter, r *http.Request) {
+		_, params, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		part, err := multipart.NewReader(r.Body, params["boundary"]).NextPart()
+		require.NoError(t, err)
+		body, _ := io.ReadAll(part)
+		uploaded[strings.TrimPrefix(r.URL.Path, "/up/")] = string(body)
+	})
+	mux.HandleFunc("/api/files.completeUploadExternal", func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, r.ParseForm())
+		completes = append(completes, r.Form)
+		_, _ = w.Write([]byte(`{"ok":true,"files":[{"id":"F1","name":"a.png"},{"id":"F2","name":"b.png"}]}`))
+	})
+	c := New("xoxp-test-token")
+	c.BaseURL = srv.URL + "/api"
+
+	resp, err := UploadFiles(context.Background(), c, &UploadFilesParams{
+		Files:          []UploadFileSpec{{FilePath: a, Title: "First"}, {FilePath: b}},
+		Channels:       "C123",
+		InitialComment: "*Release*",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, map[string]string{"F1": "aaa", "F2": "bbbb"}, uploaded)
+	require.Len(t, completes, 1, "one share call: one message")
+	assert.JSONEq(t, `[{"id":"F1","title":"First"},{"id":"F2","title":"b.png"}]`, completes[0].Get("files"))
+	assert.Equal(t, "*Release*", completes[0].Get("initial_comment"))
+	assert.Equal(t, "C123", completes[0].Get("channel_id"))
+	assert.Equal(t, []string{"F1", "F2"}, []string{resp.Files[0].ID, resp.Files[1].ID})
+}

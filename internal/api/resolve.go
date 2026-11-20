@@ -193,6 +193,12 @@ func (r *Resolver) ResolveDM(nameOrID string) (string, error) {
 
 // LooksLikeUser returns true if the target looks like a user reference
 // (starts with @, starts with U/W, or is not #-prefixed and not a channel ID).
+// IsDMChannelID reports whether target is a direct-message channel ID (D…):
+// a conversation only the user token can read.
+func IsDMChannelID(target string) bool {
+	return strings.HasPrefix(target, "D") && isChannelID(target)
+}
+
 func LooksLikeUser(target string) bool {
 	if strings.HasPrefix(target, "@") {
 		return true

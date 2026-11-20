@@ -392,3 +392,11 @@ func TestIsWordChar(t *testing.T) {
 		})
 	}
 }
+
+func TestIsDMChannelID(t *testing.T) {
+	for target, want := range map[string]bool{"D019AKC56HF": true, "C01B7T7ANE8": false, "@isaac": false, "D": false} {
+		if got := IsDMChannelID(target); got != want {
+			t.Errorf("IsDMChannelID(%q) = %v, want %v", target, got, want)
+		}
+	}
+}
