@@ -4320,6 +4320,51 @@ type FilesCommentsDeleteResponse struct {
 
 func (r *FilesCommentsDeleteResponse) envelope() *BaseResponse { return &r.BaseResponse }
 
+// FilesCompleteUploadExternalParams holds the parameters for the files.completeUploadExternal method.
+type FilesCompleteUploadExternalParams struct {
+	Files          string `url:"files"`                     // JSON array of {id, title} for the files to complete.
+	ChannelID      string `url:"channel_id,omitempty"`      // Channel ID where the files will be shared.
+	Channels       string `url:"channels,omitempty"`        // Comma-separated channel IDs where the files will be shared.
+	InitialComment string `url:"initial_comment,omitempty"` // The message text introducing the files.
+	ThreadTS       string `url:"thread_ts,omitempty"`       // Thread to share the files into.
+}
+
+// values renders the params as form-encoded url.Values, suitable for POST
+// to https://slack.com/api/files.completeUploadExternal.
+func (p *FilesCompleteUploadExternalParams) values() url.Values {
+	v := url.Values{}
+	if p == nil {
+		return v
+	}
+	v.Set("files", p.Files)
+	if p.ChannelID != "" {
+		v.Set("channel_id", p.ChannelID)
+	}
+	if p.Channels != "" {
+		v.Set("channels", p.Channels)
+	}
+	if p.InitialComment != "" {
+		v.Set("initial_comment", p.InitialComment)
+	}
+	if p.ThreadTS != "" {
+		v.Set("thread_ts", p.ThreadTS)
+	}
+	return v
+}
+
+// FilesCompleteUploadExternalResponse is the typed response envelope for files.completeUploadExternal.
+//
+// Top-level fields are walked from the spec's response.200 schema. The
+// embedded BaseResponse carries ok/error; Raw retains the full body for
+// callers needing fields the spec doesn't model.
+type FilesCompleteUploadExternalResponse struct {
+	BaseResponse
+	Files []*File         `json:"files,omitempty"`
+	Raw   json.RawMessage `json:"-"` // full response body, populated by the operation wrapper
+}
+
+func (r *FilesCompleteUploadExternalResponse) envelope() *BaseResponse { return &r.BaseResponse }
+
 // FilesDeleteParams holds the parameters for the files.delete method.
 type FilesDeleteParams struct {
 	File string `url:"file,omitempty"` // ID of file to delete.
@@ -4349,6 +4394,46 @@ type FilesDeleteResponse struct {
 }
 
 func (r *FilesDeleteResponse) envelope() *BaseResponse { return &r.BaseResponse }
+
+// FilesGetUploadURLExternalParams holds the parameters for the files.getUploadURLExternal method.
+type FilesGetUploadURLExternalParams struct {
+	Filename    string `url:"filename"`               // Name of the file being uploaded.
+	Length      int    `url:"length"`                 // Size in bytes of the file being uploaded.
+	AltTxt      string `url:"alt_txt,omitempty"`      // Description of image for screen-reader.
+	SnippetType string `url:"snippet_type,omitempty"` // Syntax type of the snippet being uploaded.
+}
+
+// values renders the params as form-encoded url.Values, suitable for POST
+// to https://slack.com/api/files.getUploadURLExternal.
+func (p *FilesGetUploadURLExternalParams) values() url.Values {
+	v := url.Values{}
+	if p == nil {
+		return v
+	}
+	v.Set("filename", p.Filename)
+	v.Set("length", strconv.Itoa(p.Length))
+	if p.AltTxt != "" {
+		v.Set("alt_txt", p.AltTxt)
+	}
+	if p.SnippetType != "" {
+		v.Set("snippet_type", p.SnippetType)
+	}
+	return v
+}
+
+// FilesGetUploadURLExternalResponse is the typed response envelope for files.getUploadURLExternal.
+//
+// Top-level fields are walked from the spec's response.200 schema. The
+// embedded BaseResponse carries ok/error; Raw retains the full body for
+// callers needing fields the spec doesn't model.
+type FilesGetUploadURLExternalResponse struct {
+	BaseResponse
+	FileID    string          `json:"file_id,omitempty"`
+	UploadURL string          `json:"upload_url,omitempty"`
+	Raw       json.RawMessage `json:"-"` // full response body, populated by the operation wrapper
+}
+
+func (r *FilesGetUploadURLExternalResponse) envelope() *BaseResponse { return &r.BaseResponse }
 
 // FilesInfoParams holds the parameters for the files.info method.
 type FilesInfoParams struct {

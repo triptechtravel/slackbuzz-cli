@@ -85,14 +85,13 @@ func uploadTestServer(t *testing.T) (*Client, *uploadTestRecord) {
 	return c, rec
 }
 
-func TestUploadFile_HappyPath(t *testing.T) {
+func TestUploadFiles_HappyPath(t *testing.T) {
 	tmp := writeTempFile(t, "hello.txt", "hello world")
 
 	c, rec := uploadTestServer(t)
 
-	resp, err := UploadFile(context.Background(), c, &UploadFileParams{
-		FilePath:       tmp,
-		Title:          "hello",
+	resp, err := UploadFiles(context.Background(), c, &UploadFilesParams{
+		Files:          []UploadFileSpec{{FilePath: tmp, Title: "hello"}},
 		InitialComment: "first comment",
 		Channels:       "C123",
 	})
@@ -113,26 +112,26 @@ func TestUploadFile_HappyPath(t *testing.T) {
 	assert.Contains(t, rec.step3Form.Get("files"), `"id":"F123"`)
 	assert.Contains(t, rec.step3Form.Get("files"), `"title":"hello"`)
 
-	// Response shape preserved (callers use .File.ID etc.)
-	assert.Equal(t, "F123", resp.File.ID)
-	assert.Equal(t, "hello", resp.File.Title)
-	assert.Equal(t, "hello.txt", resp.File.Name)
-	assert.Equal(t, "https://slack.com/permalink/F123", resp.File.Permalink)
+	// The shared file, typed by the generated response.
+	require.Len(t, resp.Files, 1)
+	assert.Equal(t, "F123", resp.Files[0].ID)
+	assert.Equal(t, "hello.txt", resp.Files[0].Name)
+	assert.Equal(t, "https://slack.com/permalink/F123", resp.Files[0].Permalink)
 }
 
-func TestUploadFile_CommaSeparatedChannelsTakesFirst(t *testing.T) {
+func TestUploadFiles_CommaSeparatedChannelsTakesFirst(t *testing.T) {
 	tmp := writeTempFile(t, "x.txt", "hi")
 	c, rec := uploadTestServer(t)
 
-	_, err := UploadFile(context.Background(), c, &UploadFileParams{
-		FilePath: tmp,
+	_, err := UploadFiles(context.Background(), c, &UploadFilesParams{
+		Files:    []UploadFileSpec{{FilePath: tmp}},
 		Channels: "C123,C456,C789",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "C123", rec.step3Form.Get("channel_id"))
 }
 
-func TestUploadFile_Step1ErrorPropagates(t *testing.T) {
+func TestUploadFiles_Step1ErrorPropagates(t *testing.T) {
 	tmp := writeTempFile(t, "x.txt", "hi")
 	mux := http.NewServeMux()
 	srv := httptest.NewServer(mux)
@@ -144,12 +143,12 @@ func TestUploadFile_Step1ErrorPropagates(t *testing.T) {
 	c := New("xoxp-test-token")
 	c.BaseURL = srv.URL + "/api"
 
-	_, err := UploadFile(context.Background(), c, &UploadFileParams{FilePath: tmp})
+	_, err := UploadFiles(context.Background(), c, &UploadFilesParams{Files: []UploadFileSpec{{FilePath: tmp}}})
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, ErrMissingScope), "expected ErrMissingScope, got %v", err)
 }
 
-func TestUploadFile_Step3ErrorPropagates(t *testing.T) {
+func TestUploadFiles_Step3ErrorPropagates(t *testing.T) {
 	tmp := writeTempFile(t, "x.txt", "hi")
 	mux := http.NewServeMux()
 	srv := httptest.NewServer(mux)
@@ -168,7 +167,7 @@ func TestUploadFile_Step3ErrorPropagates(t *testing.T) {
 	c := New("xoxp-test-token")
 	c.BaseURL = srv.URL + "/api"
 
-	_, err := UploadFile(context.Background(), c, &UploadFileParams{FilePath: tmp, Channels: "Cbad"})
+	_, err := UploadFiles(context.Background(), c, &UploadFilesParams{Files: []UploadFileSpec{{FilePath: tmp}}, Channels: "Cbad"})
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, ErrChannelNotFound), "expected ErrChannelNotFound, got %v", err)
 }
