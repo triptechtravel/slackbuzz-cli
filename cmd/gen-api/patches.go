@@ -21,6 +21,7 @@ import (
 
 // applyPatches rewrites known spec quirks in-place.
 func applyPatches(s *spec) {
+	injectExternalUploadMethods(s)
 	injectSyntheticDefinitions(s)
 	patchInlineMessageArrays(s)
 	patchKnownInlineRefs(s)
@@ -249,4 +250,59 @@ func skipWhitespace(b []byte) []byte {
 		return b[i:]
 	}
 	return b
+}
+
+// externalUploadMethods are the two methods that replaced files.upload
+// (deprecated 2025, now method_deprecated). Slack's published spec predates
+// them, so they're added here from https://api.slack.com/methods/
+// files.getUploadURLExternal and files.completeUploadExternal. Remove once
+// the spec ships them.
+const externalUploadMethods = `{
+  "/files.getUploadURLExternal": {"post": {
+    "operationId": "files_getUploadURLExternal",
+    "description": "Gets a URL for an edge external file upload.",
+    "parameters": [
+      {"name": "filename", "in": "formData", "required": true, "type": "string", "description": "Name of the file being uploaded."},
+      {"name": "length", "in": "formData", "required": true, "type": "integer", "description": "Size in bytes of the file being uploaded."},
+      {"name": "alt_txt", "in": "formData", "type": "string", "description": "Description of image for screen-reader."},
+      {"name": "snippet_type", "in": "formData", "type": "string", "description": "Syntax type of the snippet being uploaded."}
+    ],
+    "responses": {"200": {"description": "Typical success response", "schema": {"type": "object", "required": ["ok"], "properties": {
+      "ok": {"$ref": "#/definitions/defs_ok_true"},
+      "upload_url": {"type": "string"},
+      "file_id": {"type": "string"}
+    }}}},
+    "security": [{"slackAuth": ["files:write"]}]
+  }},
+  "/files.completeUploadExternal": {"post": {
+    "operationId": "files_completeUploadExternal",
+    "description": "Finishes an upload started with files.getUploadURLExternal, sharing every file in one message.",
+    "parameters": [
+      {"name": "files", "in": "formData", "required": true, "type": "string", "description": "JSON array of {id, title} for the files to complete."},
+      {"name": "channel_id", "in": "formData", "type": "string", "description": "Channel ID where the files will be shared."},
+      {"name": "initial_comment", "in": "formData", "type": "string", "description": "The message text introducing the files."},
+      {"name": "thread_ts", "in": "formData", "type": "string", "description": "Thread to share the files into."}
+    ],
+    "responses": {"200": {"description": "Typical success response", "schema": {"type": "object", "required": ["ok"], "properties": {
+      "ok": {"$ref": "#/definitions/defs_ok_true"},
+      "files": {"type": "array", "items": {"$ref": "#/definitions/objs_file"}}
+    }}}},
+    "security": [{"slackAuth": ["files:write"]}]
+  }}
+}`
+
+// injectExternalUploadMethods adds the external upload methods to the spec,
+// and drops files.upload, which they replaced: Slack answers it with
+// method_deprecated, so no wrapper should exist to call.
+func injectExternalUploadMethods(s *spec) {
+	delete(s.Paths, "/files.upload")
+	var paths map[string]map[string]operation
+	if err := json.Unmarshal([]byte(externalUploadMethods), &paths); err != nil {
+		panic("externalUploadMethods: " + err.Error())
+	}
+	for path, op := range paths {
+		if _, ok := s.Paths[path]; !ok {
+			s.Paths[path] = op
+		}
+	}
 }

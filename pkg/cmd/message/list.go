@@ -78,7 +78,7 @@ func listRun(opts *listOptions) error {
 	// history (the bot isn't a member of the user's 1:1s). For channels, the
 	// default (bot-first) client is fine.
 	var client *api.Client
-	useUserClient := api.LooksLikeUser(opts.channel)
+	useUserClient := api.LooksLikeUser(opts.channel) || api.IsDMChannelID(opts.channel)
 	if useUserClient {
 		uc, err := opts.factory.UserClient()
 		if err != nil {
@@ -144,6 +144,9 @@ func listRun(opts *listOptions) error {
 	}
 
 	if len(messages) == 0 {
+		if opts.json.WantsJSON() {
+			return opts.json.OutputJSON(ios.Out, []any{})
+		}
 		fmt.Fprintln(ios.Out, "No messages found.")
 		return nil
 	}

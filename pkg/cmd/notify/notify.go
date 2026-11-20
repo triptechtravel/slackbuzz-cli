@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/triptechtravel/slackbuzz-cli/internal/api"
 	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
-	slacktext "github.com/triptechtravel/slackbuzz-cli/internal/text"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
@@ -80,20 +79,7 @@ func notifyRun(opts *notifyOptions) error {
 	// (e.g. **bold**) would otherwise arrive broken.
 	message := opts.message
 	if message != "" {
-		var hints []slacktext.FormatHint
-		message, hints = slacktext.NormalizeOutgoing(message, false)
-		cmdutil.PrintFormatHints(ios, hints)
-	}
-
-	// Resolve @mentions in custom message text
-	if message != "" && strings.Contains(message, "@") {
-		resolved, names, resolveErr := resolver.ResolveMentions(message)
-		if resolveErr == nil {
-			message = resolved
-			for _, name := range names {
-				fmt.Fprintf(ios.ErrOut, "Mentioning %s\n", cs.Bold("@"+name))
-			}
-		}
+		message = cmdutil.PrepareOutgoing(ios, resolver, message, false)
 	}
 
 	var blocks []slackapi.Block

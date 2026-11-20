@@ -1,228 +1,137 @@
 // Hand-written file-upload helper.
 //
-// Slack hard-deprecated the legacy /files.upload endpoint in 2026 and
-// fresh requests now return method_deprecated. Modern uploads use a
-// 3-step external flow:
+// Slack hard-deprecated /files.upload (it returns method_deprecated). Its
+// replacement is a 3-step external flow; steps 1 and 3 are ordinary API
+// methods with generated wrappers (added to the spec in cmd/gen-api/patches.go,
+// since Slack's published spec predates them):
 //
-//  1. files.getUploadURLExternal — POST filename + length, get back a
-//     presigned upload URL and a file_id.
-//  2. POST the file content to the presigned URL (multipart/form-data,
-//     "filename" field). No auth header on this hop.
-//  3. files.completeUploadExternal — POST the file_id (in a JSON-string
-//     array along with optional title), channel_id, initial_comment,
-//     thread_ts. This is the call that actually shares the file.
-//
-// The public UploadFile signature is unchanged so call sites don't need
-// to touch anything; the 3-step dance is internal.
+//  1. FilesGetUploadURLExternal — filename + length → presigned URL + file_id.
+//  2. POST the bytes to the presigned URL (multipart, "filename" field). Not a
+//     Slack API method and unauthenticated: the only hand-written step. It's
+//     streamed, and bounded by the caller's context rather than the client's
+//     30s per-request timeout, which a large file on a slow link outlasts.
+//  3. FilesCompleteUploadExternal — shares every file_id in ONE call, so all
+//     the files arrive as one message with the initial comment.
 package slackapi
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 )
 
-// UploadFileParams is the option set for UploadFile.
-type UploadFileParams struct {
-	FilePath       string // path on disk; required
-	Filename       string // override filename (defaults to basename of FilePath)
-	Title          string
+// UploadFileSpec is one file in an UploadFiles call.
+type UploadFileSpec struct {
+	FilePath string // path on disk; required
+	Title    string // defaults to the file's name
+}
+
+// UploadFilesParams shares several files as one message.
+type UploadFilesParams struct {
+	Files          []UploadFileSpec
+	ChannelID      string
 	InitialComment string
-	Channels       string // single channel_id; if comma-separated, the first wins
 	ThreadTS       string
-	AltTxt         string // accessibility text (images)
-	SnippetType    string // for text snippets, e.g. "text", "go"
 }
 
-// UploadFileResponse is the typed response envelope for the upload flow.
-// Shape preserved from the legacy files.upload response so callers don't
-// change — we synthesise the .File fields from completeUploadExternal's
-// `files[0]` array entry.
-type UploadFileResponse struct {
-	BaseResponse
-	Raw  json.RawMessage `json:"-"`
-	File struct {
-		ID        string `json:"id"`
-		Title     string `json:"title"`
-		Name      string `json:"name"`
-		Mimetype  string `json:"mimetype"`
-		URL       string `json:"url_private"`
-		Permalink string `json:"permalink"`
-	} `json:"file"`
-}
-
-func (r *UploadFileResponse) envelope() *BaseResponse { return &r.BaseResponse }
-
-// uploadStep1Response is the typed response from files.getUploadURLExternal.
-type uploadStep1Response struct {
-	BaseResponse
-	UploadURL string `json:"upload_url"`
-	FileID    string `json:"file_id"`
-}
-
-func (r *uploadStep1Response) envelope() *BaseResponse { return &r.BaseResponse }
-
-// uploadStep3File mirrors a single entry in completeUploadExternal's
-// `files` response array.
-type uploadStep3File struct {
-	ID        string `json:"id"`
-	Title     string `json:"title"`
-	Name      string `json:"name"`
-	Mimetype  string `json:"mimetype"`
-	URL       string `json:"url_private"`
-	Permalink string `json:"permalink"`
-}
-
-// uploadStep3Response is the typed response from files.completeUploadExternal.
-type uploadStep3Response struct {
-	BaseResponse
-	Files []uploadStep3File `json:"files"`
-}
-
-func (r *uploadStep3Response) envelope() *BaseResponse { return &r.BaseResponse }
-
-// UploadFile uploads a file via Slack's modern external-upload flow
-// (files.getUploadURLExternal → presigned PUT → files.completeUploadExternal).
-// Replaces the deprecated files.upload endpoint.
-func UploadFile(ctx context.Context, c *Client, params *UploadFileParams) (*UploadFileResponse, error) {
-	if params == nil || params.FilePath == "" {
-		return nil, fmt.Errorf("UploadFile: FilePath is required")
+// UploadFiles uploads every file (steps 1-2), then shares them together in a
+// single completeUploadExternal call: one message carrying all the files and
+// the initial comment. It fails unless Slack reports every file shared.
+func UploadFiles(ctx context.Context, c *Client, params *UploadFilesParams) (*FilesCompleteUploadExternalResponse, error) {
+	if params == nil || len(params.Files) == 0 {
+		return nil, fmt.Errorf("UploadFiles: at least one file is required")
 	}
-
-	info, err := os.Stat(params.FilePath)
-	if err != nil {
-		return nil, fmt.Errorf("UploadFile: stat %s: %w", params.FilePath, err)
-	}
-	size := info.Size()
-
-	filename := params.Filename
-	if filename == "" {
-		filename = filepath.Base(params.FilePath)
-	}
-
-	// Step 1: getUploadURLExternal — get presigned URL + file_id
-	step1Form := url.Values{}
-	step1Form.Set("filename", filename)
-	step1Form.Set("length", strconv.FormatInt(size, 10))
-	if params.AltTxt != "" {
-		step1Form.Set("alt_txt", params.AltTxt)
-	}
-	if params.SnippetType != "" {
-		step1Form.Set("snippet_type", params.SnippetType)
-	}
-
-	var step1 uploadStep1Response
-	if _, err := Do(ctx, c, "files.getUploadURLExternal", step1Form, &step1); err != nil {
-		return nil, fmt.Errorf("files.getUploadURLExternal: %w", err)
-	}
-	if step1.UploadURL == "" || step1.FileID == "" {
-		return nil, fmt.Errorf("files.getUploadURLExternal: empty upload_url or file_id in response")
-	}
-
-	// Step 2: POST file content to the presigned URL via multipart/form-data
-	if err := putFileToPresignedURL(ctx, c, step1.UploadURL, params.FilePath, filename); err != nil {
-		return nil, err
-	}
-
-	// Step 3: completeUploadExternal — share the file
 	type fileSpec struct {
 		ID    string `json:"id"`
 		Title string `json:"title,omitempty"`
 	}
-	title := params.Title
-	if title == "" {
-		title = filename
-	}
-	filesJSON, err := json.Marshal([]fileSpec{{ID: step1.FileID, Title: title}})
-	if err != nil {
-		return nil, fmt.Errorf("UploadFile: marshal files spec: %w", err)
-	}
-
-	step3Form := url.Values{}
-	step3Form.Set("files", string(filesJSON))
-	if params.Channels != "" {
-		// Slack's new endpoint takes a single channel_id. If a caller passed
-		// multiple comma-separated, take the first.
-		first := params.Channels
-		if i := strings.IndexByte(first, ','); i >= 0 {
-			first = first[:i]
+	specs := make([]fileSpec, 0, len(params.Files))
+	for _, f := range params.Files {
+		if f.FilePath == "" {
+			return nil, fmt.Errorf("UploadFiles: FilePath is required")
 		}
-		step3Form.Set("channel_id", strings.TrimSpace(first))
-	}
-	if params.InitialComment != "" {
-		step3Form.Set("initial_comment", params.InitialComment)
-	}
-	if params.ThreadTS != "" {
-		step3Form.Set("thread_ts", params.ThreadTS)
+		info, err := os.Stat(f.FilePath)
+		if err != nil {
+			return nil, fmt.Errorf("UploadFiles: stat %s: %w", f.FilePath, err)
+		}
+		filename := filepath.Base(f.FilePath)
+
+		step1, err := FilesGetUploadURLExternal(ctx, c, &FilesGetUploadURLExternalParams{
+			Filename: filename, Length: int(info.Size()),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("files.getUploadURLExternal: %w", err)
+		}
+		if step1.UploadURL == "" || step1.FileID == "" {
+			return nil, fmt.Errorf("files.getUploadURLExternal: empty upload_url or file_id in response")
+		}
+		if err := putFileToPresignedURL(ctx, c, step1.UploadURL, f.FilePath, filename); err != nil {
+			return nil, err
+		}
+
+		title := f.Title
+		if title == "" {
+			title = filename
+		}
+		specs = append(specs, fileSpec{ID: step1.FileID, Title: title})
 	}
 
-	var step3 uploadStep3Response
-	raw, err := Do(ctx, c, "files.completeUploadExternal", step3Form, &step3)
+	filesJSON, err := json.Marshal(specs)
+	if err != nil {
+		return nil, fmt.Errorf("UploadFiles: marshal files spec: %w", err)
+	}
+	resp, err := FilesCompleteUploadExternal(ctx, c, &FilesCompleteUploadExternalParams{
+		Files:          string(filesJSON),
+		ChannelID:      params.ChannelID,
+		InitialComment: params.InitialComment,
+		ThreadTS:       params.ThreadTS,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("files.completeUploadExternal: %w", err)
 	}
-
-	out := &UploadFileResponse{
-		BaseResponse: step3.BaseResponse,
-		Raw:          raw,
+	if len(resp.Files) != len(specs) {
+		return nil, fmt.Errorf("files.completeUploadExternal: shared %d of %d files", len(resp.Files), len(specs))
 	}
-	if len(step3.Files) > 0 {
-		f := step3.Files[0]
-		out.File.ID = f.ID
-		out.File.Title = f.Title
-		out.File.Name = f.Name
-		out.File.Mimetype = f.Mimetype
-		out.File.URL = f.URL
-		out.File.Permalink = f.Permalink
-	} else {
-		// Fall back to the file_id from step 1 so callers always have
-		// something to reference.
-		out.File.ID = step1.FileID
-		out.File.Title = title
-		out.File.Name = filename
-	}
-	return out, nil
+	return resp, nil
 }
 
-// putFileToPresignedURL uploads the file content to Slack's presigned
-// URL. The presigned URL is unauthenticated — Slack rejects requests
-// that send the bearer token to it.
+// putFileToPresignedURL streams the file to Slack's presigned URL. The URL
+// is unauthenticated (Slack rejects the bearer token there), and the request
+// is bounded by ctx, not by c.HTTP's per-request timeout.
 func putFileToPresignedURL(ctx context.Context, c *Client, uploadURL, filePath, filename string) error {
 	f, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("UploadFile: open %s: %w", filePath, err)
+		return fmt.Errorf("UploadFiles: open %s: %w", filePath, err)
 	}
 	defer f.Close()
 
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	fileWriter, err := writer.CreateFormFile("filename", filename)
+	body, writer := io.Pipe()
+	form := multipart.NewWriter(writer)
+	go func() {
+		part, err := form.CreateFormFile("filename", filename)
+		if err == nil {
+			_, err = io.Copy(part, f)
+		}
+		if err == nil {
+			err = form.Close()
+		}
+		writer.CloseWithError(err)
+	}()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", uploadURL, body)
 	if err != nil {
-		return fmt.Errorf("UploadFile: create form file: %w", err)
-	}
-	if _, err := io.Copy(fileWriter, f); err != nil {
-		return fmt.Errorf("UploadFile: copy file content: %w", err)
-	}
-	if err := writer.Close(); err != nil {
+		body.Close()
 		return err
 	}
+	req.Header.Set("Content-Type", form.FormDataContentType())
 
-	req, err := http.NewRequestWithContext(ctx, "POST", uploadURL, &body)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	resp, err := c.HTTP.Do(req)
+	httpClient := &http.Client{Transport: c.HTTP.Transport}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("upload to presigned URL: %w", err)
 	}

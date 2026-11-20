@@ -1556,6 +1556,20 @@ func FilesCommentsDelete(ctx context.Context, c *Client, params *FilesCommentsDe
 	return &resp, nil
 }
 
+// FilesCompleteUploadExternal calls Slack's files.completeUploadExternal method.
+//
+// Required scopes (any one combination): files:write
+func FilesCompleteUploadExternal(ctx context.Context, c *Client, params *FilesCompleteUploadExternalParams) (*FilesCompleteUploadExternalResponse, error) {
+	var resp FilesCompleteUploadExternalResponse
+	form := params.values()
+	body, err := Do(ctx, c, "files.completeUploadExternal", form, &resp)
+	resp.Raw = body
+	if err != nil {
+		return &resp, err
+	}
+	return &resp, nil
+}
+
 // FilesDelete calls Slack's files.delete method.
 //
 // Required scopes (any one combination): files:write:user
@@ -1563,6 +1577,20 @@ func FilesDelete(ctx context.Context, c *Client, params *FilesDeleteParams) (*Fi
 	var resp FilesDeleteResponse
 	form := params.values()
 	body, err := Do(ctx, c, "files.delete", form, &resp)
+	resp.Raw = body
+	if err != nil {
+		return &resp, err
+	}
+	return &resp, nil
+}
+
+// FilesGetUploadURLExternal calls Slack's files.getUploadURLExternal method.
+//
+// Required scopes (any one combination): files:write
+func FilesGetUploadURLExternal(ctx context.Context, c *Client, params *FilesGetUploadURLExternalParams) (*FilesGetUploadURLExternalResponse, error) {
+	var resp FilesGetUploadURLExternalResponse
+	form := params.values()
+	body, err := Do(ctx, c, "files.getUploadURLExternal", form, &resp)
 	resp.Raw = body
 	if err != nil {
 		return &resp, err
@@ -1703,20 +1731,6 @@ func FilesSharedPublicURL(ctx context.Context, c *Client, params *FilesSharedPub
 	var resp FilesSharedPublicURLResponse
 	form := params.values()
 	body, err := Do(ctx, c, "files.sharedPublicURL", form, &resp)
-	resp.Raw = body
-	if err != nil {
-		return &resp, err
-	}
-	return &resp, nil
-}
-
-// FilesUpload calls Slack's files.upload method.
-//
-// Required scopes (any one combination): files:write:user
-func FilesUpload(ctx context.Context, c *Client, params *FilesUploadParams) (*FilesUploadResponse, error) {
-	var resp FilesUploadResponse
-	form := params.values()
-	body, err := Do(ctx, c, "files.upload", form, &resp)
 	resp.Raw = body
 	if err != nil {
 		return &resp, err

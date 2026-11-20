@@ -9,6 +9,14 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`send --file`** / **`message send --file`** (repeatable) — attach files
+  to the message itself: the text and every file arrive as one message (the
+  text is optional). `--json` gives the message's `timestamp` like a plain
+  send, plus the files.
+- **`file delete <F…>`** — deleting a message leaves its files; this removes
+  them (`--confirm`, `--as-bot`).
+- **`me` / `@me`** — the signed-in user, in any command that takes a user.
+- **`--version`**.
 - **`app create` / `app update` install via OAuth** — after the app is
   created (or its manifest pushed), Slack opens in the browser; click
   Allow and both tokens are stored. No more copying tokens from OAuth &
@@ -48,6 +56,25 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Browser links open on WSL via Windows' URL handler (then `wslview`)
   instead of `xdg-open`.
 - The plain-text token storage notice prints once per run, on stderr.
+- `file upload` with several files posts ONE message carrying all of them
+  (it posted one message per file, the comment on the first). It now runs
+  through the send path: `--comment` gets Markdown→mrkdwn and @mentions
+  (`--raw` to skip), agent mode and self-DMs behave as in `send`, and its
+  token retry no longer retries the same token.
+- A partial user name resolves only when it can only mean one person; it
+  used to take the shortest match (`me` resolved to an app called
+  SatisMeter). Ambiguous names now error with the candidates.
+- Uploads stream each file and are no longer cut off by the 30s
+  per-request timeout; an upload Slack reports as only partly shared fails.
+- Uploads use generated wrappers for `files.getUploadURLExternal` /
+  `files.completeUploadExternal` (added to the spec by a patch; the spec
+  predates them), and the deprecated `files.upload` wrapper is gone. The
+  app manifest's scopes come from the patched spec too.
+- `message list --json` prints `[]` when there are no messages.
+- Clickable OSC 8 links only when stdout is a terminal: piped output no
+  longer wraps timestamps in escape codes.
+- `message list D…` reads a DM by its channel ID (it failed with
+  `channel_not_found` through the bot token).
 
 ## [0.12.1]
 

@@ -29,7 +29,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"go/ast"
@@ -42,49 +41,23 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+
+	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 )
 
-// ─── spec loading (minimal subset; enough for scope extraction) ────────────
+// ─── method scopes ─────────────────────────────────────────────────────────
 
-type spec struct {
-	Paths map[string]map[string]operation `json:"paths"`
-}
-
-type operation struct {
-	Security []map[string][]string `json:"security,omitempty"`
-}
-
-func loadSpec(path string) (map[string][]string, error) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
+// loadMethodScopes reads the scopes cmd/gen-api generated from the spec AFTER
+// its patches (internal/slackapi/scopes.gen.go), so methods the published spec
+// lacks (files.*UploadExternal) carry their scopes too. Run api-gen first.
+func loadMethodScopes() map[string][]string {
+	out := make(map[string][]string, len(slackapi.MethodScopes))
+	for method, scopes := range slackapi.MethodScopes {
+		sorted := append([]string(nil), scopes...)
+		sort.Strings(sorted)
+		out[method] = sorted
 	}
-	var s spec
-	if err := json.Unmarshal(raw, &s); err != nil {
-		return nil, err
-	}
-	out := make(map[string][]string)
-	for p, verbs := range s.Paths {
-		apiName := strings.TrimPrefix(p, "/")
-		for _, op := range verbs {
-			seen := map[string]bool{}
-			var scopes []string
-			for _, sec := range op.Security {
-				for _, ss := range sec {
-					for _, sc := range ss {
-						if seen[sc] {
-							continue
-						}
-						seen[sc] = true
-						scopes = append(scopes, sc)
-					}
-				}
-			}
-			sort.Strings(scopes)
-			out[apiName] = scopes
-		}
-	}
-	return out, nil
+	return out
 }
 
 // ─── name munging (mirrors cmd/gen-api) ────────────────────────────────────
@@ -122,19 +95,19 @@ func apiNameToGoName(apiName string) string {
 // set of Slack API method names called via `slackapi.<GoName>(...)`.
 //
 // It also recognises the hand-augmented operations (SearchFiles → search.files,
-// UploadFile → files.getUploadURLExternal + files.completeUploadExternal) so
+// UploadFiles → files.getUploadURLExternal + files.completeUploadExternal) so
 // the manifest stays correct even when the generated operation set isn't the
-// only source of truth. UploadFile maps to TWO methods because Slack's modern
+// only source of truth. UploadFiles maps to TWO methods because Slack's modern
 // upload flow is a 3-step external dance.
 func findCalledMethods(cmdRoot string, goToAPI map[string]string) (map[string]bool, error) {
 	called := map[string]bool{}
 
 	// Hand-augmented mappings — keep in sync with internal/slackapi/operations.go
 	// and internal/slackapi/files.go. A single Go function can map to multiple
-	// underlying API methods (e.g. UploadFile uses two endpoints).
+	// underlying API methods (e.g. UploadFiles uses two endpoints).
 	handAugmented := map[string][]string{
 		"SearchFiles": {"search.files"},
-		"UploadFile":  {"files.getUploadURLExternal", "files.completeUploadExternal"},
+		"UploadFiles": {"files.getUploadURLExternal", "files.completeUploadExternal"},
 	}
 
 	fset := token.NewFileSet()
@@ -359,15 +332,11 @@ var appManifest = map[string]interface{}{
 // ─── main ──────────────────────────────────────────────────────────────────
 
 func main() {
-	specPath := flag.String("spec", "api/specs/slack_web.json", "Path to Slack OpenAPI spec")
 	cmdRoot := flag.String("cmd-root", "pkg/cmd", "Source root to scan for slackapi.* calls")
 	outPath := flag.String("out", "pkg/cmd/app/manifest.go", "Output path for the generated manifest")
 	flag.Parse()
 
-	methodScopes, err := loadSpec(*specPath)
-	if err != nil {
-		log.Fatalf("load spec: %v", err)
-	}
+	methodScopes := loadMethodScopes()
 
 	// Build reverse map: GoName → APIName for the AST walk.
 	goToAPI := map[string]string{}

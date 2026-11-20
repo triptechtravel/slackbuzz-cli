@@ -1,7 +1,10 @@
 package root
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
+	"github.com/triptechtravel/slackbuzz-cli/internal/build"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/activity"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/app"
 	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/auth"
@@ -25,8 +28,9 @@ import (
 // NewCmdRoot creates the root command for the slack CLI.
 func NewCmdRoot(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "slackbuzz",
-		Short: "Slack CLI - message, search, and manage channels from the command line",
+		Use:     "slackbuzz",
+		Version: fmt.Sprintf("%s (%s)", build.Version, build.Commit),
+		Short:   "Slack CLI - message, search, and manage channels from the command line",
 		Long: `Work with Slack channels, messages, and users from your terminal.
 
 GETTING STARTED

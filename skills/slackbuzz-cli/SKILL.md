@@ -84,8 +84,43 @@ slackbuzz message list @alice
 
 ```bash
 slackbuzz message edit #general 1706000000.000000 "Updated text"
-slackbuzz message delete #general 1706000000.000000
+slackbuzz message delete #general 1706000000.000000 --confirm   # --confirm is required when not interactive
 ```
+
+A message the bot posted (e.g. a self-DM, which goes through the bot) is
+deleted with `--as-bot`, targeting yourself: `slackbuzz message delete @me <ts> --confirm --as-bot`
+(`me`/`@me` is always the signed-in user).
+
+### Images and files
+
+Attach files to a message with `--file` (repeatable). The text and every file
+arrive as **one** message, the way the Slack client posts them. Don't post the
+text and then upload images as thread replies.
+
+```bash
+# A post with screenshots under it
+slackbuzz send '#released' "*Website release*\n- Deals show on place pages" \
+  --file deal.png --file closure.png --file tip.png
+
+# Files alone (or with a caption): also one message
+slackbuzz file upload a.png b.png '#design' --comment "Before and after"
+```
+
+`--comment` and the message text go through the same Markdown→mrkdwn and
+@mention handling as `send` (`--raw` turns conversion off). With `--file` the
+text is optional. `--file` can't be combined with `--blocks` (Slack posts a
+file's message as plain mrkdwn). `send --file --json` returns
+`{"channel", "timestamp", "files": [{"id", "name", …}]}`: the timestamp to
+edit, delete or reply to, and file IDs.
+
+Deleting a message leaves its files in Slack; remove them too:
+
+```bash
+slackbuzz message delete '#released' 1706000000.000000 --confirm
+slackbuzz file delete F0CK25W3ABH F0CKKDV2K8R --confirm
+```
+
+Screenshots for a channel read best at phone width (about 390px wide).
 
 ### Search
 
@@ -288,7 +323,9 @@ into `~/.config/slack/recent.json` so future no-arg defaults flow.
 - **Shell unescape**: Common shell artifacts (backslash-escaped punctuation) are cleaned before sending
 - **Case-insensitive resolution**: User lookup matches display names and usernames regardless of case
 - **Permission feedback**: Missing tokens or scopes produce clear error messages. Use `slackbuzz auth status` to check capabilities.
-- **Deeplinks**: Output includes clickable Slack deeplinks
+- **Deeplinks**: In a terminal, timestamps and "Open in Slack" are clickable links. Piped or captured output (scripts, agents) is plain text, so there is nothing to strip
+- **DM channel IDs**: `message list D…` reads a DM by its ID (through the user token)
+
 ## Formatting
 
 Messages auto-convert standard Markdown to Slack mrkdwn:
@@ -364,7 +401,7 @@ Most surface area is generated; the hand-written pieces are:
 
 - `internal/slackapi/client.go` — transport (`Do`, error envelope, sentinel errors)
 - `internal/slackapi/blocks.go` — Block Kit composition helpers
-- `internal/slackapi/files.go` — multipart `files.upload`
+- `internal/slackapi/files.go` — the external upload flow (`UploadFiles`: every file uploaded, then shared in one `files.completeUploadExternal`, so they post as one message)
 - `cmd/gen-api/patches.go` — narrow spec-quirk fixups (inline-vs-ref drift, nullable tuples)
 
 See [Architecture](https://triptechtravel.github.io/slackbuzz-cli/architecture/) for the complete design.

@@ -85,16 +85,15 @@ func uploadTestServer(t *testing.T) (*Client, *uploadTestRecord) {
 	return c, rec
 }
 
-func TestUploadFile_HappyPath(t *testing.T) {
+func TestUploadFiles_HappyPath(t *testing.T) {
 	tmp := writeTempFile(t, "hello.txt", "hello world")
 
 	c, rec := uploadTestServer(t)
 
-	resp, err := UploadFile(context.Background(), c, &UploadFileParams{
-		FilePath:       tmp,
-		Title:          "hello",
+	resp, err := UploadFiles(context.Background(), c, &UploadFilesParams{
+		Files:          []UploadFileSpec{{FilePath: tmp, Title: "hello"}},
 		InitialComment: "first comment",
-		Channels:       "C123",
+		ChannelID:      "C123",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -113,26 +112,14 @@ func TestUploadFile_HappyPath(t *testing.T) {
 	assert.Contains(t, rec.step3Form.Get("files"), `"id":"F123"`)
 	assert.Contains(t, rec.step3Form.Get("files"), `"title":"hello"`)
 
-	// Response shape preserved (callers use .File.ID etc.)
-	assert.Equal(t, "F123", resp.File.ID)
-	assert.Equal(t, "hello", resp.File.Title)
-	assert.Equal(t, "hello.txt", resp.File.Name)
-	assert.Equal(t, "https://slack.com/permalink/F123", resp.File.Permalink)
+	// The shared file, typed by the generated response.
+	require.Len(t, resp.Files, 1)
+	assert.Equal(t, "F123", resp.Files[0].ID)
+	assert.Equal(t, "hello.txt", resp.Files[0].Name)
+	assert.Equal(t, "https://slack.com/permalink/F123", resp.Files[0].Permalink)
 }
 
-func TestUploadFile_CommaSeparatedChannelsTakesFirst(t *testing.T) {
-	tmp := writeTempFile(t, "x.txt", "hi")
-	c, rec := uploadTestServer(t)
-
-	_, err := UploadFile(context.Background(), c, &UploadFileParams{
-		FilePath: tmp,
-		Channels: "C123,C456,C789",
-	})
-	require.NoError(t, err)
-	assert.Equal(t, "C123", rec.step3Form.Get("channel_id"))
-}
-
-func TestUploadFile_Step1ErrorPropagates(t *testing.T) {
+func TestUploadFiles_Step1ErrorPropagates(t *testing.T) {
 	tmp := writeTempFile(t, "x.txt", "hi")
 	mux := http.NewServeMux()
 	srv := httptest.NewServer(mux)
@@ -144,12 +131,12 @@ func TestUploadFile_Step1ErrorPropagates(t *testing.T) {
 	c := New("xoxp-test-token")
 	c.BaseURL = srv.URL + "/api"
 
-	_, err := UploadFile(context.Background(), c, &UploadFileParams{FilePath: tmp})
+	_, err := UploadFiles(context.Background(), c, &UploadFilesParams{Files: []UploadFileSpec{{FilePath: tmp}}})
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, ErrMissingScope), "expected ErrMissingScope, got %v", err)
 }
 
-func TestUploadFile_Step3ErrorPropagates(t *testing.T) {
+func TestUploadFiles_Step3ErrorPropagates(t *testing.T) {
 	tmp := writeTempFile(t, "x.txt", "hi")
 	mux := http.NewServeMux()
 	srv := httptest.NewServer(mux)
@@ -168,7 +155,7 @@ func TestUploadFile_Step3ErrorPropagates(t *testing.T) {
 	c := New("xoxp-test-token")
 	c.BaseURL = srv.URL + "/api"
 
-	_, err := UploadFile(context.Background(), c, &UploadFileParams{FilePath: tmp, Channels: "Cbad"})
+	_, err := UploadFiles(context.Background(), c, &UploadFilesParams{Files: []UploadFileSpec{{FilePath: tmp}}, ChannelID: "Cbad"})
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, ErrChannelNotFound), "expected ErrChannelNotFound, got %v", err)
 }
@@ -181,4 +168,69 @@ func writeTempFile(t *testing.T, name, body string) string {
 	path := filepath.Join(dir, name)
 	require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
 	return path
+}
+
+// Several files are uploaded one by one but shared in ONE
+// completeUploadExternal call, so they arrive as one message with the comment.
+func TestUploadFiles_SharesAllFilesInOneMessage(t *testing.T) {
+	a := writeTempFile(t, "a.png", "aaa")
+	b := writeTempFile(t, "b.png", "bbbb")
+
+	mux := http.NewServeMux()
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	n, uploaded, completes := 0, map[string]string{}, []url.Values{}
+	mux.HandleFunc("/api/files.getUploadURLExternal", func(w http.ResponseWriter, r *http.Request) {
+		n++
+		id := "F" + string(rune('0'+n))
+		_, _ = w.Write([]byte(`{"ok":true,"upload_url":"` + srv.URL + `/up/` + id + `","file_id":"` + id + `"}`))
+	})
+	mux.HandleFunc("/up/", func(w http.ResponseWriter, r *http.Request) {
+		_, params, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		part, err := multipart.NewReader(r.Body, params["boundary"]).NextPart()
+		require.NoError(t, err)
+		body, _ := io.ReadAll(part)
+		uploaded[strings.TrimPrefix(r.URL.Path, "/up/")] = string(body)
+	})
+	mux.HandleFunc("/api/files.completeUploadExternal", func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, r.ParseForm())
+		completes = append(completes, r.Form)
+		_, _ = w.Write([]byte(`{"ok":true,"files":[{"id":"F1","name":"a.png"},{"id":"F2","name":"b.png"}]}`))
+	})
+	c := New("xoxp-test-token")
+	c.BaseURL = srv.URL + "/api"
+
+	resp, err := UploadFiles(context.Background(), c, &UploadFilesParams{
+		Files:          []UploadFileSpec{{FilePath: a, Title: "First"}, {FilePath: b}},
+		ChannelID:      "C123",
+		InitialComment: "*Release*",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, map[string]string{"F1": "aaa", "F2": "bbbb"}, uploaded)
+	require.Len(t, completes, 1, "one share call: one message")
+	assert.JSONEq(t, `[{"id":"F1","title":"First"},{"id":"F2","title":"b.png"}]`, completes[0].Get("files"))
+	assert.Equal(t, "*Release*", completes[0].Get("initial_comment"))
+	assert.Equal(t, "C123", completes[0].Get("channel_id"))
+	assert.Equal(t, []string{"F1", "F2"}, []string{resp.Files[0].ID, resp.Files[1].ID})
+}
+
+// Slack reporting fewer files shared than were uploaded is a failure, not a
+// quiet "0 files sent".
+func TestUploadFiles_FailsWhenNotEveryFileIsShared(t *testing.T) {
+	tmp := writeTempFile(t, "x.txt", "hi")
+	mux := http.NewServeMux()
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	mux.HandleFunc("/api/files.getUploadURLExternal", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"ok":true,"upload_url":"` + srv.URL + `/upload","file_id":"F1"}`))
+	})
+	mux.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+	mux.HandleFunc("/api/files.completeUploadExternal", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"ok":true,"files":[]}`))
+	})
+	c := New("xoxp-test-token")
+	c.BaseURL = srv.URL + "/api"
+
+	_, err := UploadFiles(context.Background(), c, &UploadFilesParams{Files: []UploadFileSpec{{FilePath: tmp}}, ChannelID: "C1"})
+	require.ErrorContains(t, err, "shared 0 of 1 files")
 }

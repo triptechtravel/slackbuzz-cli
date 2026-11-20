@@ -20,10 +20,10 @@ internal/
   slackapi/                  # the typed Slack Web API client
     client.go                  # hand-written transport (Do, BaseResponse, APIError)
     blocks.go                  # block-kit composition helpers
-    files.go                   # multipart files.upload (legacy endpoint)
+    files.go                   # UploadFiles: generated upload calls + the presigned byte upload
     operations.go              # hand-augmented ops not in spec (search.files)
     types.go                   # hand-augmented types
-    types.gen.go               # generated: 19 shared structs + 174 method param/response types
+    types.gen.go               # generated: 19 shared structs + 175 method param/response types
     operations.gen.go          # generated: one wrapper per Slack method
     scopes.gen.go              # generated: method → required scopes map
   api/                       # transport-level concerns wrapping slackapi
@@ -55,9 +55,9 @@ api/specs/slack_web.json│    cmd/gen-api              │
                                                          ▼
                         ┌─────────────────────────────────────────────────┐
                         │ internal/slackapi/                              │
-                        │   types.gen.go      (174 method param/response  │
+                        │   types.gen.go      (175 method param/response  │
                         │                       structs + 19 shared types)│
-                        │   operations.gen.go (174 wrapper functions)     │
+                        │   operations.gen.go (175 wrapper functions)     │
                         │   scopes.gen.go     (method → []scope map)      │
                         └────────────────────────┬────────────────────────┘
                                                  │
@@ -86,10 +86,12 @@ Slack's OpenAPI spec has a handful of consistent quirks that hurt generated-code
 - **Empty `objs_user`** — same problem, no fields in the spec. Patches inject a synthetic `objs_user` with the fields commands actually consume (id, name, deleted, profile ref).
 - **Inline topic/purpose objects** — `objs_channel.topic` and `.purpose` are `{value, creator, last_set}` inline. Patches synthesise `objs_topic_purpose` and rewrite the refs so callers get `*TopicPurpose` instead of `map[string]any`.
 - **Nullable scalars as tuple-items** — `{"items":[{$ref}, {type:"null"}]}` instead of OpenAPI 3's `nullable: true`. The generator's `goTypeForSchema` peels these back to the underlying primitive.
+- **Missing methods** — the spec predates `files.getUploadURLExternal` and `files.completeUploadExternal`, which replaced the now-deprecated `files.upload`. Patches add the two and drop `files.upload`, so uploads use generated wrappers like every other method.
 - **Timestamp number-vs-string** — `ts`, `latest`, `oldest`, `thread_ts` are typed as `number` but sub-second precision matters; treated as `string` everywhere.
 
 Each patch lives in `cmd/gen-api/patches.go` with a comment explaining what it changes and why. Patches are organised into:
 
+- **`injectExternalUploadMethods`** — adds the external upload methods (and drops `files.upload`).
 - **`injectSyntheticDefinitions`** — adds new `objs_*` entries to the spec for shapes Slack uses but doesn't name.
 - **`patchInlineMessageArrays`** — generic detection of inline message-shaped arrays.
 - **`patchKnownInlineRefs`** — surgical path-keyed rewrites (e.g. `conversations.replies → messages → objs_message`).

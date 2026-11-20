@@ -12,8 +12,11 @@ Upload files to a channel or DM
 Upload one or more files to a Slack channel or direct message.
 
 The last argument is the channel or user target. All preceding arguments are
-file paths to upload. Each file is uploaded individually and shared to the
-target channel.
+file paths to upload. All the files are shared together as ONE message, with
+--comment as its text (formatted like message send: Markdown to mrkdwn and
+@mentions; --raw keeps it as typed).
+
+To post a message with files attached, message send --file does the same.
 
 The channel argument accepts #channel-name, channel ID, @username, or user ID.
 
@@ -43,10 +46,11 @@ slackbuzz file upload <file-path>... <channel|user> [flags]
 ### Options
 
 ```
-      --comment string     Initial comment posted with the file(s)
+      --comment string     Text of the message the file(s) are posted in
   -h, --help               help for upload
       --jq string          Filter JSON output using a jq expression
       --json               Output JSON
+      --raw                Disable Markdown→mrkdwn conversion of --comment
       --template string    Format JSON output using a Go template
       --thread-ts string   Thread timestamp to upload into
       --title string       File title in Slack (applies to first file)

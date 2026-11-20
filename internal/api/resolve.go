@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
 	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
 )
 
@@ -20,6 +21,8 @@ type Resolver struct {
 	users       map[string]string // name → ID
 	loaded      bool
 	usersLoaded bool
+	// self returns the signed-in user's ID, for "me"/"@me".
+	self func() (string, error)
 }
 
 // NewResolver creates a new Resolver backed by the given Slack client.
@@ -28,6 +31,10 @@ func NewResolver(client *slackapi.Client) *Resolver {
 		client:   client,
 		channels: make(map[string]string),
 		users:    make(map[string]string),
+		self: func() (string, error) {
+			id, _, err := auth.ResolveUserID()
+			return id, err
+		},
 	}
 }
 
@@ -83,6 +90,11 @@ func (r *Resolver) ResolveUser(nameOrID string) (string, error) {
 	// Strip leading @ if present
 	nameOrID = strings.TrimPrefix(nameOrID, "@")
 
+	// "me" is the signed-in user, whichever token is asking.
+	if strings.EqualFold(nameOrID, "me") {
+		return r.self()
+	}
+
 	// If it looks like a user ID (starts with U or W), return as-is
 	if isUserID(nameOrID) {
 		return nameOrID, nil
@@ -106,12 +118,14 @@ func (r *Resolver) ResolveUser(nameOrID string) (string, error) {
 		return id, nil
 	}
 
-	// No exact match — accept fuzzy contains (`@michell` → `@michelle`).
-	// Don't accept raw fuzzy here: typing the wrong handle and DM-ing the
-	// wrong person is worse than rejecting the input.
+	// No exact match — accept a partial name (`@michell` → `@michelle`) only
+	// when every name containing it is the same person. Messaging the wrong
+	// person is worse than asking: "me" once matched an app called SatisMeter.
 	candidates := mapKeys(r.users)
-	if matched, tier, ok := fuzzyMatch(nameOrID, candidates); ok && tier == matchContains {
-		return r.users[matched], nil
+	if id, names := uniqueContains(r.users, nameOrID); id != "" {
+		return id, nil
+	} else if len(names) > 1 {
+		return "", fmt.Errorf("user %q is ambiguous: %s", nameOrID, strings.Join(names, ", "))
 	}
 
 	suggestions := suggestSimilar(nameOrID, candidates, 3)
@@ -119,6 +133,31 @@ func (r *Resolver) ResolveUser(nameOrID string) (string, error) {
 		return "", fmt.Errorf("user %q not found. Did you mean: %s?", nameOrID, strings.Join(suggestions, ", "))
 	}
 	return "", fmt.Errorf("user %q not found", nameOrID)
+}
+
+// uniqueContains returns the one user ID whose names contain target
+// (case-insensitive), or "" and the distinct matching names when they belong
+// to several users.
+func uniqueContains(users map[string]string, target string) (string, []string) {
+	lower := strings.ToLower(target)
+	ids := map[string]bool{}
+	var names []string
+	for name, id := range users {
+		if strings.Contains(strings.ToLower(name), lower) {
+			ids[id] = true
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	if len(ids) == 1 {
+		for id := range ids {
+			return id, names
+		}
+	}
+	if len(names) > 5 {
+		names = names[:5]
+	}
+	return "", names
 }
 
 // mapKeys returns a deduplicated list of map keys.
@@ -189,6 +228,12 @@ func (r *Resolver) ResolveDM(nameOrID string) (string, error) {
 		return "", fmt.Errorf("open DM with %q: response had no channel ID", nameOrID)
 	}
 	return resp.Channel.ID, nil
+}
+
+// IsDMChannelID reports whether target is a direct-message channel ID (D…):
+// a conversation only the user token can read.
+func IsDMChannelID(target string) bool {
+	return strings.HasPrefix(target, "D") && isChannelID(target)
 }
 
 // LooksLikeUser returns true if the target looks like a user reference

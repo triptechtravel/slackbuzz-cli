@@ -14,7 +14,7 @@ A command-line tool for working with Slack messages, channels, and cross-tool wo
 
 - **Activity inbox** -- see mentions, DMs, and threads that need your attention (alias: `inbox`)
 - **Message management** -- list, send, search, edit, and delete messages in any channel or DM
-- **File upload & search** -- upload files to channels/DMs (multi-file, thread support) and search shared files
+- **File upload & search** -- attach files to a message (`send --file`), upload several as one message (thread support), search and delete files
 - **Thread support** -- read and reply to threads
 - **Reactions** -- add and remove reactions, see reactions inline in activity views
 - **Saved items** -- save messages for later and manage your bookmarks
@@ -86,10 +86,10 @@ Send a message:
 slackbuzz send '#general' "Hello from the terminal!"
 ```
 
-Upload a file:
+Post a message with screenshots (one message, files under the text):
 
 ```sh
-slackbuzz file upload report.pdf '#general'
+slackbuzz send '#releases' "New dashboard is live" --file before.png --file after.png
 ```
 
 ## Team setup
@@ -128,7 +128,8 @@ The script installs slackbuzz, sets up the Claude Code skill, and walks through 
 | `slackbuzz message edit <channel> <ts> "text"` | Edit a message |
 | `slackbuzz message delete <channel> <ts>` | Delete a message |
 | `slackbuzz message search <query>` | Search messages (user token required) |
-| `slackbuzz file upload <file>... <channel>` | Upload files to a channel or DM |
+| `slackbuzz file upload <file>... <channel>` | Upload files to a channel or DM, as one message |
+| `slackbuzz file delete <file-id>...` | Delete files |
 | `slackbuzz file search <query>` | Search files (user token required) |
 | `slackbuzz react <channel> <ts> :emoji:` | React to a message |
 | `slackbuzz react remove <channel> <ts> :emoji:` | Remove a reaction |

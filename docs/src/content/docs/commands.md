@@ -316,6 +316,8 @@ slackbuzz message send #general "Fixed!" --thread-ts 1706000000.000000
 |------|-------------|
 | `--thread-ts TIMESTAMP` | Send as a thread reply |
 | `--as-bot` | Send as the bot instead of your user account |
+| `--file PATH` | Attach a file (repeatable). Text and files arrive as one message; the text is then optional |
+| `--raw` | Disable Markdown→mrkdwn conversion |
 
 ### `message edit <channel> <timestamp> [new-text]`
 
@@ -385,7 +387,7 @@ Upload and search files shared in Slack.
 
 ### `file upload <file-path>... <channel|user>`
 
-Upload one or more files to a channel or DM. Each file is uploaded individually and shared to the target.
+Upload one or more files to a channel or DM. All the files arrive as one message, with `--comment` as its text (formatted like `message send`). The same as `message send --file`.
 
 ```sh
 # Upload a single file
@@ -407,10 +409,19 @@ slackbuzz file upload results.png #dev --thread-ts 1706000000.000000
 | Flag | Description |
 |------|-------------|
 | `--title TEXT` | File title in Slack (applies to first file) |
-| `--comment TEXT` | Initial comment posted with the file(s) |
+| `--comment TEXT` | Text of the message the file(s) are posted in |
+| `--raw` | Disable Markdown→mrkdwn conversion of `--comment` |
 | `--thread-ts TIMESTAMP` | Thread timestamp to upload into |
 | `--json` | Output as JSON |
 | `--jq EXPR` | Filter JSON output with a jq expression |
+
+### `file delete <file-id>...`
+
+Delete files by ID (`F…`). Deleting a message leaves its files behind; this removes them. `--confirm` is required when not interactive; `--as-bot` for files the bot posted.
+
+```sh
+slackbuzz file delete F0CK25W3ABH F0CKKDV2K8R --confirm
+```
 
 ### `file search <query>`
 
