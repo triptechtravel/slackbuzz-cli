@@ -1,4 +1,4 @@
-//go:generate go run ../../../cmd/gen-manifest -spec ../../../api/specs/slack_web.json -cmd-root ../../../pkg/cmd -out manifest.go
+//go:generate go run ../../../cmd/gen-manifest -cmd-root ../../../pkg/cmd -out manifest.go
 
 package app
 
