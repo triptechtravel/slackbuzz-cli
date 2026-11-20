@@ -9,6 +9,9 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`message send --file`** (repeatable) — attach files to the message
+  itself: the text and every file arrive as one message.
+
 - **`app create` / `app update` install via OAuth** — after the app is
   created (or its manifest pushed), Slack opens in the browser; click
   Allow and both tokens are stored. No more copying tokens from OAuth &
@@ -48,6 +51,14 @@ versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Browser links open on WSL via Windows' URL handler (then `wslview`)
   instead of `xdg-open`.
 - The plain-text token storage notice prints once per run, on stderr.
+- `file upload` with several files posts ONE message carrying all of them
+  (it posted one message per file, the comment on the first). Its
+  `--comment` now goes through the same Markdown→mrkdwn and @mention
+  handling as `send`; `--raw` turns conversion off.
+- Clickable OSC 8 links only when stdout is a terminal: piped output no
+  longer wraps timestamps in escape codes.
+- `message list D…` reads a DM by its channel ID (it failed with
+  `channel_not_found` through the bot token).
 
 ## [0.12.1]
 
