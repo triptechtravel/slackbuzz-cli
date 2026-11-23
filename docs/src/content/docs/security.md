@@ -50,7 +50,7 @@ Both tokens and their associated identities (user ID, username) are stored separ
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Email security concerns to: **info@campermate.com**
+Email security concerns to: **security@campermate.com**
 
 Include:
 - Description of the vulnerability
