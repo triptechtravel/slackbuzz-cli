@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/app"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/app"
 )
 
 func main() {

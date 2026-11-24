@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/iostreams"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/iostreams"
 )
 
 // startWait runs waitForCode against a fresh listener and returns the

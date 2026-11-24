@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/isaacrowntree/slackbuzz-cli/internal/recent"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/slackapi"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/text"
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmd/activity"
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
-	"github.com/triptechtravel/slackbuzz-cli/internal/recent"
-	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
-	"github.com/triptechtravel/slackbuzz-cli/internal/text"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/activity"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
 // openLastDM is the behaviour of `slackbuzz dm` with no subcommand —

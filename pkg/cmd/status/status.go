@@ -8,10 +8,10 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/isaacrowntree/slackbuzz-cli/internal/auth"
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmd/activity"
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
-	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/activity"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
 // NewCmdStatus returns the "status" command group.

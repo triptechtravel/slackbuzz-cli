@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/slackapi"
 )
 
 // TokenInfo holds the result of validating a token via auth.test.

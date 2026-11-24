@@ -15,10 +15,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/isaacrowntree/slackbuzz-cli/internal/iostreams"
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmd/root"
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmdutil"
 	"github.com/spf13/cobra/doc"
-	"github.com/triptechtravel/slackbuzz-cli/internal/iostreams"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/root"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
 func main() {

@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/browser"
-	"github.com/triptechtravel/slackbuzz-cli/internal/iostreams"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/browser"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/iostreams"
 )
 
 // oauthRedirectURL is the redirect URL registered in the app manifest
@@ -26,7 +26,7 @@ import (
 // ?code=…&state=… query to the CLI's loopback listener. The listener's
 // port travels in `state`; the code is useless without the app's client
 // secret, which never leaves this machine.
-const oauthRedirectURL = "https://triptechtravel.github.io/slackbuzz-cli/oauth/callback/"
+const oauthRedirectURL = "https://isaacrowntree.com/slackbuzz-cli/oauth/callback/"
 
 // oauthTokenURL, openBrowser and oauthTimeout are vars so tests can stub them.
 var (

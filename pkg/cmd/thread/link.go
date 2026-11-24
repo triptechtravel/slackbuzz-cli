@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/isaacrowntree/slackbuzz-cli/internal/slackapi"
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
-	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
 type linkOptions struct {

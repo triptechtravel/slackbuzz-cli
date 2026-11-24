@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/build"
-	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/build"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/slackapi"
 )
 
 // Client is the unified Slack API client used across commands.

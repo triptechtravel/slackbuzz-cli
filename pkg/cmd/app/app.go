@@ -3,8 +3,8 @@
 package app
 
 import (
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
 // NewCmdApp returns the top-level "app" command.

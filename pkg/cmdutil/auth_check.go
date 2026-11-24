@@ -1,8 +1,8 @@
 package cmdutil
 
 import (
+	"github.com/isaacrowntree/slackbuzz-cli/internal/auth"
 	"github.com/spf13/cobra"
-	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
 )
 
 // NeedsAuth returns a pre-run function that validates any token is available.

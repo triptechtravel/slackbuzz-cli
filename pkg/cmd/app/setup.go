@@ -7,11 +7,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
-	"github.com/triptechtravel/slackbuzz-cli/internal/clipboard"
-	"github.com/triptechtravel/slackbuzz-cli/internal/config"
-	"github.com/triptechtravel/slackbuzz-cli/internal/iostreams"
-	"github.com/triptechtravel/slackbuzz-cli/internal/prompter"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/auth"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/clipboard"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/config"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/iostreams"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/prompter"
 )
 
 // configTokenEnv lets scripts and agents supply the App Configuration Token

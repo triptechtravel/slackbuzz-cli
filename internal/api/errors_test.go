@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/slackapi"
 )
 
 func TestIsMissingScopeError(t *testing.T) {

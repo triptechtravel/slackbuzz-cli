@@ -66,8 +66,8 @@ slackbuzz later add #backend 1706000000.000000
 
 | Tool | Install | Used for |
 |------|---------|----------|
-| **slackbuzz** | `brew install triptechtravel/tap/slackbuzz` | Core Slack operations |
-| **clickup** | `brew install triptechtravel/tap/clickup` | Follow up on ClickUp task ID enrichment hints |
+| **slackbuzz** | `brew install isaacrowntree/tap/slackbuzz` | Core Slack operations |
+| **clickup** | `brew install isaacrowntree/tap/clickup` | Follow up on ClickUp task ID enrichment hints |
 | **gh** | `brew install gh` | Follow up on GitHub PR URL enrichment hints |
 
 All three CLIs store credentials in the system keyring and support `--json` output for programmatic access.

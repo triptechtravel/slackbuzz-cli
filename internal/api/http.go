@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/build"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/build"
 )
 
 // rateLimitTransport injects a User-Agent header and handles rate limiting.

@@ -4,10 +4,10 @@ import (
 	"os"
 	"sync"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/api"
-	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
-	"github.com/triptechtravel/slackbuzz-cli/internal/config"
-	"github.com/triptechtravel/slackbuzz-cli/internal/iostreams"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/api"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/auth"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/config"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/iostreams"
 )
 
 // Factory provides lazy-initialized dependencies to commands.

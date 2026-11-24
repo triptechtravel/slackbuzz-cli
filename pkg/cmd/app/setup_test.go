@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/config"
-	"github.com/triptechtravel/slackbuzz-cli/internal/iostreams"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/config"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/iostreams"
 )
 
 func TestConfigTokenFrom(t *testing.T) {

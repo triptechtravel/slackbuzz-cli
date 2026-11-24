@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/api"
-	"github.com/triptechtravel/slackbuzz-cli/internal/iostreams"
-	slacktext "github.com/triptechtravel/slackbuzz-cli/internal/text"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/api"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/iostreams"
+	slacktext "github.com/isaacrowntree/slackbuzz-cli/internal/text"
 )
 
 // PrintFormatHints surfaces Markdown→mrkdwn conversion notes on stderr. Used

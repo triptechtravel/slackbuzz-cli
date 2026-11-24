@@ -8,7 +8,7 @@ Get a teammate from zero to fully operational with a single command.
 ## One-line setup
 
 ```sh
-curl -sL https://raw.githubusercontent.com/triptechtravel/slackbuzz-cli/main/scripts/setup.sh | bash
+curl -sL https://raw.githubusercontent.com/isaacrowntree/slackbuzz-cli/main/scripts/setup.sh | bash
 ```
 
 The script walks through each step interactively: installing slackbuzz, setting up the Claude Code skill, and authenticating with Slack. It's idempotent — safe to run again if anything changes.
@@ -45,14 +45,14 @@ If you prefer not to use the setup script, here's what it does:
 ### 1. Install slackbuzz
 
 ```sh
-brew install triptechtravel/tap/slackbuzz
+brew install isaacrowntree/tap/slackbuzz
 ```
 
 ### 2. Install the Claude Code skill (optional)
 
 ```sh
 mkdir -p ~/.claude/skills/slackbuzz-cli
-curl -fsSL https://raw.githubusercontent.com/triptechtravel/slackbuzz-cli/main/skills/slackbuzz-cli/SKILL.md \
+curl -fsSL https://raw.githubusercontent.com/isaacrowntree/slackbuzz-cli/main/skills/slackbuzz-cli/SKILL.md \
   -o ~/.claude/skills/slackbuzz-cli/SKILL.md
 ```
 
@@ -135,7 +135,7 @@ The Slack app needs additional OAuth scopes. Ask your team lead to:
 ### Updating slackbuzz
 
 ```sh
-brew update && brew upgrade triptechtravel/tap/slackbuzz
+brew update && brew upgrade isaacrowntree/tap/slackbuzz
 ```
 
 Or re-run the setup script — it detects existing installations and upgrades automatically.
@@ -143,7 +143,7 @@ Or re-run the setup script — it detects existing installations and upgrades au
 ### Updating the Claude Code skill
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/triptechtravel/slackbuzz-cli/main/skills/slackbuzz-cli/SKILL.md \
+curl -fsSL https://raw.githubusercontent.com/isaacrowntree/slackbuzz-cli/main/skills/slackbuzz-cli/SKILL.md \
   -o ~/.claude/skills/slackbuzz-cli/SKILL.md
 ```
 

@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/iostreams"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/iostreams"
 )
 
 // TablePrinter renders TTY-aware table output.

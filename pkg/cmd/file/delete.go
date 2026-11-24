@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/isaacrowntree/slackbuzz-cli/internal/api"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/prompter"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/slackapi"
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
-	"github.com/triptechtravel/slackbuzz-cli/internal/api"
-	"github.com/triptechtravel/slackbuzz-cli/internal/prompter"
-	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
 // NewCmdDelete returns the "file delete" command.

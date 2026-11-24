@@ -2,7 +2,7 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
 export default defineConfig({
-  site: 'https://triptechtravel.github.io',
+  site: 'https://isaacrowntree.com',
   base: '/slackbuzz-cli',
   integrations: [
     starlight({
@@ -15,14 +15,14 @@ export default defineConfig({
       favicon: '/favicon.svg',
       customCss: ['./src/styles/custom.css'],
       head: [
-        { tag: 'meta', attrs: { property: 'og:image', content: 'https://triptechtravel.github.io/slackbuzz-cli/og-image.png' } },
+        { tag: 'meta', attrs: { property: 'og:image', content: 'https://isaacrowntree.com/slackbuzz-cli/og-image.png' } },
         { tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
         { tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
         { tag: 'meta', attrs: { property: 'og:description', content: 'A command-line tool for working with Slack messages, channels, and cross-tool workflows -- designed for developers who live in the terminal.' } },
         { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' } },
       ],
       social: [
-        { icon: 'github', label: 'GitHub', href: 'https://github.com/triptechtravel/slackbuzz-cli' },
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/isaacrowntree/slackbuzz-cli' },
       ],
       sidebar: [
         {

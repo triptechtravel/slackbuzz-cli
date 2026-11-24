@@ -56,7 +56,7 @@ jobs:
     steps:
       - name: Install slackbuzz
         run: |
-          curl -sL https://github.com/triptechtravel/slackbuzz-cli/releases/latest/download/slackbuzz_linux_amd64.tar.gz | tar xz
+          curl -sL https://github.com/isaacrowntree/slackbuzz-cli/releases/latest/download/slackbuzz_linux_amd64.tar.gz | tar xz
           sudo mv slackbuzz /usr/local/bin/
       - name: Authenticate
         run: echo "${{ secrets.SLACK_BOT_TOKEN }}" | slackbuzz auth login --with-token
@@ -79,7 +79,7 @@ jobs:
     steps:
       - name: Install slackbuzz
         run: |
-          curl -sL https://github.com/triptechtravel/slackbuzz-cli/releases/latest/download/slackbuzz_linux_amd64.tar.gz | tar xz
+          curl -sL https://github.com/isaacrowntree/slackbuzz-cli/releases/latest/download/slackbuzz_linux_amd64.tar.gz | tar xz
           sudo mv slackbuzz /usr/local/bin/
       - name: Authenticate
         run: echo "${{ secrets.SLACK_BOT_TOKEN }}" | slackbuzz auth login --with-token

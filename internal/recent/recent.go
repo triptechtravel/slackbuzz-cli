@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/config"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/config"
 )
 
 // Entry is a single (target, when) tuple. Newest first.

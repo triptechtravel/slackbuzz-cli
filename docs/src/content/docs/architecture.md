@@ -121,7 +121,7 @@ Rate limiting and retry on 429 happen one layer up, in `internal/api/http.go:New
 Use `errors.Is` against the sentinels:
 
 ```go
-import "github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
+import "github.com/isaacrowntree/slackbuzz-cli/internal/slackapi"
 
 resp, err := slackapi.ChatPostMessage(ctx, client, params)
 if errors.Is(err, slackapi.ErrChannelNotFound) {

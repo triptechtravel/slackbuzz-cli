@@ -3,9 +3,9 @@ package auth
 import (
 	"fmt"
 
+	"github.com/isaacrowntree/slackbuzz-cli/internal/auth"
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
-	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
 // NewCmdLogout returns the "auth logout" command.

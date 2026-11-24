@@ -21,9 +21,9 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/triptechtravel/slackbuzz-cli/internal/build.Version={{.Version}}
-      - -X github.com/triptechtravel/slackbuzz-cli/internal/build.Commit={{.Commit}}
-      - -X github.com/triptechtravel/slackbuzz-cli/internal/build.Date={{.Date}}
+      - -X github.com/isaacrowntree/slackbuzz-cli/internal/build.Version={{.Version}}
+      - -X github.com/isaacrowntree/slackbuzz-cli/internal/build.Commit={{.Commit}}
+      - -X github.com/isaacrowntree/slackbuzz-cli/internal/build.Date={{.Date}}
 
 archives:
   - format: tar.gz
@@ -34,12 +34,12 @@ archives:
 
 brews:
   - repository:
-      owner: triptechtravel
+      owner: isaacrowntree
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
     skip_upload: false
-    homepage: "https://github.com/triptechtravel/slackbuzz-cli"
+    homepage: "https://github.com/isaacrowntree/slackbuzz-cli"
     description: "CLI tool for Slack messaging, channel management, and search"
     license: "MIT"
     install: |
@@ -61,5 +61,5 @@ changelog:
 
 release:
   github:
-    owner: triptechtravel
+    owner: isaacrowntree
     name: slackbuzz-cli

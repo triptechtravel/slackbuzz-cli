@@ -1,12 +1,12 @@
-# @triptechtravel/slackbuzz-cli
+# @isaacrowntree/slackbuzz-cli
 
 A command-line tool for working with Slack messages, channels, and cross-tool workflows -- designed for developers who live in the terminal.
 
-[![Release](https://img.shields.io/github/v/release/triptechtravel/slackbuzz-cli)](https://github.com/triptechtravel/slackbuzz-cli/releases)
+[![Release](https://img.shields.io/github/v/release/isaacrowntree/slackbuzz-cli)](https://github.com/isaacrowntree/slackbuzz-cli/releases)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/triptechtravel/slackbuzz-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/triptechtravel/slackbuzz-cli/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/triptechtravel/slackbuzz-cli)](https://goreportcard.com/report/github.com/triptechtravel/slackbuzz-cli)
-[![Go Reference](https://pkg.go.dev/badge/github.com/triptechtravel/slackbuzz-cli.svg)](https://pkg.go.dev/github.com/triptechtravel/slackbuzz-cli)
+[![CI](https://github.com/isaacrowntree/slackbuzz-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/isaacrowntree/slackbuzz-cli/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/isaacrowntree/slackbuzz-cli)](https://goreportcard.com/report/github.com/isaacrowntree/slackbuzz-cli)
+[![Go Reference](https://pkg.go.dev/badge/github.com/isaacrowntree/slackbuzz-cli.svg)](https://pkg.go.dev/github.com/isaacrowntree/slackbuzz-cli)
 
 `slackbuzz` brings Slack to your terminal. Read your inbox, reply to messages, manage your status, upload files, and search your workspace without opening a browser.
 
@@ -39,18 +39,18 @@ A command-line tool for working with Slack messages, channels, and cross-tool wo
 ### Go
 
 ```sh
-go install github.com/triptechtravel/slackbuzz-cli/cmd/slackbuzz@latest
+go install github.com/isaacrowntree/slackbuzz-cli/cmd/slackbuzz@latest
 ```
 
 ### Homebrew
 
 ```sh
-brew install triptechtravel/tap/slackbuzz
+brew install isaacrowntree/tap/slackbuzz
 ```
 
 ### Binary releases
 
-Download a prebuilt binary from the [releases page](https://github.com/triptechtravel/slackbuzz-cli/releases) and add it to your `PATH`.
+Download a prebuilt binary from the [releases page](https://github.com/isaacrowntree/slackbuzz-cli/releases) and add it to your `PATH`.
 
 ## Quick start
 
@@ -97,10 +97,10 @@ slackbuzz send '#releases' "New dashboard is live" --file before.png --file afte
 Get a teammate from zero to fully operational with one command:
 
 ```sh
-curl -sL https://raw.githubusercontent.com/triptechtravel/slackbuzz-cli/main/scripts/setup.sh | bash
+curl -sL https://raw.githubusercontent.com/isaacrowntree/slackbuzz-cli/main/scripts/setup.sh | bash
 ```
 
-The script installs slackbuzz, sets up the Claude Code skill, and walks through authentication interactively. See the [team setup guide](https://triptechtravel.github.io/slackbuzz-cli/team-setup/) for details.
+The script installs slackbuzz, sets up the Claude Code skill, and walks through authentication interactively. See the [team setup guide](https://isaacrowntree.com/slackbuzz-cli/team-setup/) for details.
 
 ## Command reference
 

@@ -404,4 +404,4 @@ Most surface area is generated; the hand-written pieces are:
 - `internal/slackapi/files.go` — the external upload flow (`UploadFiles`: every file uploaded, then shared in one `files.completeUploadExternal`, so they post as one message)
 - `cmd/gen-api/patches.go` — narrow spec-quirk fixups (inline-vs-ref drift, nullable tuples)
 
-See [Architecture](https://triptechtravel.github.io/slackbuzz-cli/architecture/) for the complete design.
+See [Architecture](https://isaacrowntree.com/slackbuzz-cli/architecture/) for the complete design.

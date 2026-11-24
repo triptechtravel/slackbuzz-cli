@@ -42,7 +42,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/slackapi"
 )
 
 // ─── method scopes ─────────────────────────────────────────────────────────

@@ -3,8 +3,8 @@ package version
 import (
 	"fmt"
 
+	"github.com/isaacrowntree/slackbuzz-cli/internal/build"
 	"github.com/spf13/cobra"
-	"github.com/triptechtravel/slackbuzz-cli/internal/build"
 )
 
 // NewCmdVersion returns the version command.

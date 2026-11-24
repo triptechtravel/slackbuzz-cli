@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/browser"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/browser"
 )
 
 // psGetClipboard retries because Windows fails clipboard reads outright

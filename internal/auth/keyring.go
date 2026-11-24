@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/config"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/config"
 	"github.com/zalando/go-keyring"
 )
 

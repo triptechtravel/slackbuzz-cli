@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/slackapi"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/slackapi"
 )
 
 // AuthExpiredError indicates the token has been revoked or expired (401 response).

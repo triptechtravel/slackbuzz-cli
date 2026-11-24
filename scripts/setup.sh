@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # slackbuzz team setup — run with:
-#   curl -sL https://raw.githubusercontent.com/triptechtravel/slackbuzz-cli/main/scripts/setup.sh | bash
+#   curl -sL https://raw.githubusercontent.com/isaacrowntree/slackbuzz-cli/main/scripts/setup.sh | bash
 #
 # Idempotent: safe to run multiple times.
 
@@ -37,7 +37,7 @@ step()    { printf "\n%s━━ Step %s ━━━━━━━━━━━━━�
 printf "\n"
 printf "%s  slackbuzz — team setup%s\n" "$BOLD" "$RESET"
 printf "  Bridge Slack, ClickUp, and GitHub from your terminal.\n"
-printf "  %shttps://triptechtravel.github.io/slackbuzz-cli%s\n" "$DIM" "$RESET"
+printf "  %shttps://isaacrowntree.com/slackbuzz-cli%s\n" "$DIM" "$RESET"
 printf "\n"
 
 # ── Step 1: Prerequisites ───────────────────────────────────────────
@@ -66,14 +66,14 @@ if command -v slackbuzz &>/dev/null; then
   CURRENT_VERSION=$(slackbuzz version 2>/dev/null | head -1 || echo "unknown")
   info "slackbuzz is already installed ($CURRENT_VERSION)"
   info "Checking for updates..."
-  if brew upgrade triptechtravel/tap/slackbuzz 2>/dev/null; then
+  if brew upgrade isaacrowntree/tap/slackbuzz 2>/dev/null; then
     success "Upgraded to latest version"
   else
     success "Already on the latest version"
   fi
 else
   info "Installing slackbuzz via Homebrew..."
-  brew install triptechtravel/tap/slackbuzz
+  brew install isaacrowntree/tap/slackbuzz
   success "Installed slackbuzz"
 fi
 
@@ -96,13 +96,13 @@ else
   elif [ -f "$SKILL_DIR/SKILL.md" ]; then
     success "Skill already installed"
     info "Updating to latest version..."
-    SKILL_URL="https://raw.githubusercontent.com/triptechtravel/slackbuzz-cli/main/skills/slackbuzz-cli/SKILL.md"
+    SKILL_URL="https://raw.githubusercontent.com/isaacrowntree/slackbuzz-cli/main/skills/slackbuzz-cli/SKILL.md"
     curl -fsSL "$SKILL_URL" -o "$SKILL_DIR/SKILL.md"
     success "Skill updated"
   else
     info "Downloading Claude Code skill..."
     mkdir -p "$SKILL_DIR"
-    SKILL_URL="https://raw.githubusercontent.com/triptechtravel/slackbuzz-cli/main/skills/slackbuzz-cli/SKILL.md"
+    SKILL_URL="https://raw.githubusercontent.com/isaacrowntree/slackbuzz-cli/main/skills/slackbuzz-cli/SKILL.md"
     curl -fsSL "$SKILL_URL" -o "$SKILL_DIR/SKILL.md"
     success "Skill installed to $SKILL_DIR"
   fi
@@ -206,6 +206,6 @@ printf "  %s│%s    \"Search Slack for deploy instructions\"       %s│%s\n" "
 printf "  %s│%s                                                  %s│%s\n" "$CYAN" "$RESET" "$CYAN" "$RESET"
 fi
 
-printf "  %s│%s  Docs: triptechtravel.github.io/slackbuzz-cli   %s│%s\n" "$CYAN" "$RESET" "$CYAN" "$RESET"
+printf "  %s│%s  Docs: isaacrowntree.com/slackbuzz-cli   %s│%s\n" "$CYAN" "$RESET" "$CYAN" "$RESET"
 printf "  %s└──────────────────────────────────────────────────┘%s\n" "$CYAN" "$RESET"
 printf "\n"

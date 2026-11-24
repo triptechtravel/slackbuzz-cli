@@ -1,8 +1,8 @@
 package auth
 
 import (
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
 // NewCmdAuth returns the top-level "auth" command that groups login, logout, and status.

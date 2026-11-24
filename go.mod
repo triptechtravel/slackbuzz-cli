@@ -1,4 +1,4 @@
-module github.com/triptechtravel/slackbuzz-cli
+module github.com/isaacrowntree/slackbuzz-cli
 
 go 1.25.6
 

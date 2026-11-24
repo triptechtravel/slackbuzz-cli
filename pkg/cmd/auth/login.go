@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/isaacrowntree/slackbuzz-cli/internal/auth"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/clipboard"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/prompter"
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmdutil"
 	"github.com/spf13/cobra"
-	"github.com/triptechtravel/slackbuzz-cli/internal/auth"
-	"github.com/triptechtravel/slackbuzz-cli/internal/clipboard"
-	"github.com/triptechtravel/slackbuzz-cli/internal/prompter"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
 )
 
 type loginOptions struct {

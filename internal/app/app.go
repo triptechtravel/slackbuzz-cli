@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/triptechtravel/slackbuzz-cli/internal/api"
-	"github.com/triptechtravel/slackbuzz-cli/internal/iostreams"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmd/root"
-	"github.com/triptechtravel/slackbuzz-cli/pkg/cmdutil"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/api"
+	"github.com/isaacrowntree/slackbuzz-cli/internal/iostreams"
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmd/root"
+	"github.com/isaacrowntree/slackbuzz-cli/pkg/cmdutil"
 )
 
 // Run bootstraps and executes the CLI. Returns exit code.

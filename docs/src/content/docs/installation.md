@@ -10,7 +10,7 @@ There are three ways to install the `slackbuzz` CLI.
 If you have Go 1.25 or later installed, use `go install`:
 
 ```sh
-go install github.com/triptechtravel/slackbuzz-cli/cmd/slackbuzz@latest
+go install github.com/isaacrowntree/slackbuzz-cli/cmd/slackbuzz@latest
 ```
 
 This places the binary in your `$GOBIN` directory (typically `$HOME/go/bin`). Make sure that directory is in your `PATH`.
@@ -20,18 +20,18 @@ This places the binary in your `$GOBIN` directory (typically `$HOME/go/bin`). Ma
 On macOS and Linux, install via Homebrew:
 
 ```sh
-brew install triptechtravel/tap/slackbuzz
+brew install isaacrowntree/tap/slackbuzz
 ```
 
 To upgrade later:
 
 ```sh
-brew upgrade triptechtravel/tap/slackbuzz
+brew upgrade isaacrowntree/tap/slackbuzz
 ```
 
 ## Binary releases
 
-Download a prebuilt binary for your platform from the [GitHub releases page](https://github.com/triptechtravel/slackbuzz-cli/releases).
+Download a prebuilt binary for your platform from the [GitHub releases page](https://github.com/isaacrowntree/slackbuzz-cli/releases).
 
 1. Download the archive for your OS and architecture.
 2. Extract it.
@@ -75,4 +75,4 @@ slackbuzz completion powershell | Out-String | Invoke-Expression
 
 ## Dependencies
 
-The `digest` command optionally uses the [ClickUp CLI](https://github.com/triptechtravel/clickup-cli) and [GitHub CLI](https://cli.github.com/) (`gh`) for cross-tool briefings. Sections are gracefully skipped if these CLIs are not installed.
+The `digest` command optionally uses the [ClickUp CLI](https://github.com/isaacrowntree/clickup-cli) and [GitHub CLI](https://cli.github.com/) (`gh`) for cross-tool briefings. Sections are gracefully skipped if these CLIs are not installed.

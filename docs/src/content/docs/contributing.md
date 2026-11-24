@@ -9,7 +9,7 @@ Thank you for your interest in contributing to slackbuzz-cli! This page covers d
 
 ```sh
 # Clone the repository
-git clone https://github.com/triptechtravel/slackbuzz-cli.git
+git clone https://github.com/isaacrowntree/slackbuzz-cli.git
 cd slackbuzz-cli
 
 # Build
@@ -115,8 +115,8 @@ Releases use [GoReleaser](https://goreleaser.com/) via GitHub Actions:
 1. Tag the release: `git tag v0.1.0`
 2. Push the tag: `git push origin v0.1.0`
 3. GitHub Actions builds binaries for all platforms
-4. Updates the Homebrew formula in `triptechtravel/homebrew-tap`
+4. Updates the Homebrew formula in `isaacrowntree/homebrew-tap`
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the [MIT License](https://github.com/triptechtravel/slackbuzz-cli/blob/main/LICENSE).
+By contributing, you agree that your contributions will be licensed under the [MIT License](https://github.com/isaacrowntree/slackbuzz-cli/blob/main/LICENSE).

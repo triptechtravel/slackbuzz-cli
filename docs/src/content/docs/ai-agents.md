@@ -134,7 +134,7 @@ Install the SlackBuzz CLI skill into Claude Code so it automatically uses the CL
 
 ```sh
 mkdir -p ~/.claude/skills/slackbuzz-cli
-curl -fsSL https://raw.githubusercontent.com/triptechtravel/slackbuzz-cli/main/skills/slackbuzz-cli/SKILL.md \
+curl -fsSL https://raw.githubusercontent.com/isaacrowntree/slackbuzz-cli/main/skills/slackbuzz-cli/SKILL.md \
   -o ~/.claude/skills/slackbuzz-cli/SKILL.md
 ```
 
